@@ -18,27 +18,40 @@ type simpleProfiler struct {
 	in       chan spec.TSData
 	settings spec.Settings
 
-	data       []spec.TSData
+	cpudata    []spec.TSData
 	dataaccess *sync.Mutex
 
+	cpu simpleProfilerMetric
+	io  simpleProfilerMetric
+	net simpleProfilerMetric
+}
+
+type simpleProfilerMetric struct {
 	currentState state
 	statematrix  [][]int64
 }
 
+func generateMetric() simpleProfilerMetric {
+	metric := simpleProfilerMetric{}
+	metric.statematrix = make([][]int64, maxstates)
+	for i := range metric.statematrix {
+		metric.statematrix[i] = make([]int64, maxstates)
+	}
+	return metric
+}
+
 func (profiler *simpleProfiler) initialize(settings spec.Settings) error {
 	profiler.settings = settings
-	profiler.data = make([]spec.TSData, 0)
+	profiler.cpudata = make([]spec.TSData, 0)
 	profiler.dataaccess = &sync.Mutex{}
 	profiler.in = make(chan spec.TSData, 10)
 
 	// initialize state matrix
-	profiler.statematrix = make([][]int64, maxstates)
-	for i := range profiler.statematrix {
-		profiler.statematrix[i] = make([]int64, maxstates)
-	}
+	profiler.cpu = generateMetric()
+	profiler.io = generateMetric()
+	profiler.net = generateMetric()
 
-	go profiler.profileRunner()
-	go profiler.profilePrintRunner()
+	go profiler.profileOutputRunner()
 	go profiler.listener()
 	return nil
 }

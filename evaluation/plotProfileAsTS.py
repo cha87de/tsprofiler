@@ -23,7 +23,7 @@ profile = [
 # 1       0%      0%      0%      100%
 # 2       0%      0%      33%     67%
 # 3       0%      1%      0%      98%
-profile1 = [
+profile = [
     [25/100, 0/100, 0/100, 75/100],
     [0/100, 0/100, 0/100, 100/100],
     [0/100, 0/100, 33/100, 67/100],
@@ -31,11 +31,16 @@ profile1 = [
 ]
 
 # UUID: 463d4924-c799-43b0-a769-e160b6e58c6c
+#         0       1       2       3
+# 0       93%     3%      2%      2%
+# 1       67%     8%      6%      19%
+# 2       62%     3%      9%      26%
+# 3       36%     24%     14%     26%
 profile = [
-    [89/100, 5/100, 5/100, 0/100],
-    [50/100, 0/100, 0/100, 50/100],
-    [0/100, 0/100, 0/100, 100/100],
-    [50/100, 50/100, 0/100, 0/100]
+    [93/100, 3/100, 2/100, 2/100],
+    [67/100, 8/100, 6/100, 19/100],
+    [62/100, 3/100, 9/100, 26/100],
+    [36/100, 24/100, 14/100, 26/100]
 ]
 
 def getNextState(currentState):
@@ -89,12 +94,14 @@ def main():
 
     output = []
     currentState = 0
-    for x in range(8000):
+    for x in range(2000):
         currentState = getNextState(currentState)
         value = currentState * 25
         value += randint(0, 24)
         output.append(value)
 
-    printPlot(aggregate(output, 400))
+    maxPlotTs = len(output) # no aggregation
+    # maxPlotTs = 400 # with aggregation if < len(output)
+    printPlot(aggregate(output, maxPlotTs))
 
 main()

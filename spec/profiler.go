@@ -1,5 +1,9 @@
 package spec
 
+import (
+	"time"
+)
+
 // TSProfiler defines the profilers interface to transfer time series data into
 // a statistical profile
 type TSProfiler interface {
@@ -10,6 +14,8 @@ type TSProfiler interface {
 
 // Settings defines settings for TSProfiler
 type Settings struct {
-	Frequency int
-	Name      string
+	BufferSize     int
+	Name           string
+	OutputFreq     time.Duration
+	OutputCallback func(data TSProfile)
 }

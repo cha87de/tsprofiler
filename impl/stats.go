@@ -1,6 +1,10 @@
 package impl
 
-import "gonum.org/v1/gonum/stat"
+import (
+	"math"
+
+	"gonum.org/v1/gonum/stat"
+)
 
 type state struct {
 	value int64
@@ -32,4 +36,24 @@ func discretize(value float64) state {
 		return state{value: 3}
 	}
 	return state{value: 0}
+}
+
+func computeProbabilities(statematrix [][]int64) [][]int {
+	var output [][]int
+	for _, row := range statematrix {
+		sum := sum(row)
+		var rowPerc []int
+		for _, v := range row {
+			var frac float64
+			if sum == 0 {
+				frac = 0.0
+			} else {
+				frac = float64(v) / float64(sum) * 100
+			}
+			fracInt := int(math.Round(frac))
+			rowPerc = append(rowPerc, fracInt)
+		}
+		output = append(output, rowPerc)
+	}
+	return output
 }

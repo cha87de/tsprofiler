@@ -1,80 +1,64 @@
 package impl
 
 import (
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/cha87de/tsprofiler/spec"
 )
 
-func (profiler *simpleProfiler) profileRunner() {
+func (profiler *simpleProfiler) profileOutputRunner() {
 	for {
 		start := time.Now()
-		profiler.profile()
-		nextRun := start.Add(time.Duration(profiler.settings.Frequency) * time.Second)
-		time.Sleep(nextRun.Sub(time.Now()))
-	}
-}
-
-func (profiler *simpleProfiler) profilePrintRunner() {
-	for {
-		start := time.Now()
-		output := profiler.printTransitMatrix()
-
-		// write output to file
-		filename := "profile_" + profiler.settings.Name + ".txt"
-		//f, err := os.Create(filename)
-		f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-		if err != nil {
-			fmt.Printf("error opening profile file %s: %s", filename, err)
-		}
-		f.WriteString(output)
-		f.Close()
-
-		nextRun := start.Add(time.Duration(1) * time.Minute)
+		profiler.output()
+		nextRun := start.Add(time.Duration(20) * time.Second)
 		time.Sleep(nextRun.Sub(time.Now()))
 	}
 }
 
 func (profiler *simpleProfiler) profile() {
+	// only considering CPU at the moment!
+	// TODO add IO and Net
 	profiler.dataaccess.Lock()
-	var data []float64
-	for _, d := range profiler.data {
-		data = append(data, d.Value)
+	var cpudata []float64
+	for _, d := range profiler.cpudata {
+		cpudata = append(cpudata, d.CPU)
 	}
-	profiler.data = make([]spec.TSData, 0)
+	profiler.cpudata = make([]spec.TSData, 0)
 	profiler.dataaccess.Unlock()
 
-	newState := discretize(aggregate(data))
-	profiler.transit(newState)
+	newCPUState := discretize(aggregate(cpudata))
+	profiler.transit(newCPUState)
 }
 
 func (profiler *simpleProfiler) transit(state state) {
-	profiler.statematrix[profiler.currentState.value][state.value]++
+	// only considering CPU at the moment!
+	// TODO add IO and Net
+	profiler.cpu.statematrix[profiler.cpu.currentState.value][state.value]++
 	// finally: update current state
-	profiler.currentState = state
+	profiler.cpu.currentState = state
 }
 
-func (profiler *simpleProfiler) printTransitMatrix() string {
-	output := fmt.Sprintf("\n\t")
-	for i := 0; i < maxstates; i++ {
-		output = output + fmt.Sprintf("%d\t", i)
-	}
-	output = output + fmt.Sprintf("\n")
-	for i, row := range profiler.statematrix {
-		output = output + fmt.Sprintf("%d\t", i)
-		sum := sum(row)
-		for _, v := range row {
-			var frac float64
-			if sum == 0 {
-				frac = 0.0
-			} else {
-				frac = float64(v) / float64(sum) * 100
-			}
-			output = output + fmt.Sprintf("%.0f%%\t", frac)
-		}
-		output = output + fmt.Sprintf("\n")
-	}
-	return output
+func (profiler *simpleProfiler) output() {
+	cpuProb := computeProbabilities(profiler.cpu.statematrix)
+	ioProb := computeProbabilities(profiler.io.statematrix)
+	netProb := computeProbabilities(profiler.net.statematrix)
+
+	var metrics []spec.TSProfileMetric
+	metrics = append(metrics, spec.TSProfileMetric{
+		Name:     "cpu",
+		TXMatrix: cpuProb,
+	})
+	metrics = append(metrics, spec.TSProfileMetric{
+		Name:     "io",
+		TXMatrix: ioProb,
+	})
+	metrics = append(metrics, spec.TSProfileMetric{
+		Name:     "net",
+		TXMatrix: netProb,
+	})
+
+	profiler.settings.OutputCallback(spec.TSProfile{
+		Name:    profiler.settings.Name,
+		Metrics: metrics,
+	})
 }
