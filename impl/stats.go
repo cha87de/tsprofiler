@@ -50,10 +50,18 @@ func computeProbabilities(statematrix [][]int64) [][]int {
 			} else {
 				frac = float64(v) / float64(sum) * 100
 			}
-			fracInt := int(math.Round(frac))
+			fracInt := int(round(frac))
 			rowPerc = append(rowPerc, fracInt)
 		}
 		output = append(output, rowPerc)
 	}
 	return output
+}
+
+func round(x float64) float64 {
+	t := math.Trunc(x)
+	if math.Abs(x-t) >= 0.5 {
+		return t + math.Copysign(1, x)
+	}
+	return t
 }
