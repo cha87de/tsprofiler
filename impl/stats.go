@@ -2,6 +2,7 @@ package impl
 
 import (
 	"math"
+	"sort"
 
 	"gonum.org/v1/gonum/stat"
 )
@@ -10,11 +11,24 @@ type state struct {
 	value int64
 }
 
-const maxstates = 4
-
-func aggregate(data []float64) float64 {
+func avg(data []float64) float64 {
 	avg := stat.Mean(data, nil)
 	return avg
+}
+
+func stddev(data []float64) float64 {
+	stddev := stat.StdDev(data, nil)
+	return stddev
+}
+
+func min(v []float64) float64 {
+	sort.Float64s(v)
+	return v[0]
+}
+
+func max(v []float64) float64 {
+	sort.Float64s(v)
+	return v[len(v)-1]
 }
 
 func sum(data []int64) int64 {
@@ -25,17 +39,23 @@ func sum(data []int64) int64 {
 	return sum
 }
 
-func discretize(value float64) state {
-	if value < 25 {
-		return state{value: 0}
-	} else if value < 50 {
-		return state{value: 1}
-	} else if value < 75 {
-		return state{value: 2}
-	} else if value <= 100 {
-		return state{value: 3}
+func discretize(value float64, maxstate int, min float64, max float64) state {
+	stateStepSize := float64(max-min) / float64(maxstate)
+	stateStepValue := min
+	stateValue := int64(-1)
+	for stateStepValue < max {
+
+		if value < stateStepValue {
+			return state{
+				value: stateValue,
+			}
+		}
+		stateValue++
+		stateStepValue += stateStepSize
 	}
-	return state{value: 0}
+	return state{
+		value: stateValue,
+	}
 }
 
 func computeProbabilities(statematrix [][]int64) [][]int {

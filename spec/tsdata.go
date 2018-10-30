@@ -1,8 +1,12 @@
 package spec
 
-// TSData describes a ts data point used as profiler input
+// TSData describes a ts data point used as profiler input with a metrics array
 type TSData struct {
-	CPU float64
-	IO  float64
-	Net float64
+	Metrics []TSDataMetric
+}
+
+// TSDataMetric describes profiler input for a single metrix
+type TSDataMetric struct {
+	Name  string
+	Value float64
 }
