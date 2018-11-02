@@ -7,7 +7,7 @@ import (
 )
 
 func (profiler *profiler) profileOutputRunner() {
-	for {
+	for !profiler.stopped {
 		start := time.Now()
 		profiler.output()
 		nextRun := start.Add(profiler.settings.OutputFreq)

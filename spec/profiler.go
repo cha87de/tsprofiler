@@ -9,6 +9,9 @@ import (
 type TSProfiler interface {
 	// Put allows applications to provide a new TSData input to the profiler
 	Put(data TSData)
+
+	// Terminate stops and removes the profiler
+	Terminate()
 }
 
 // Settings defines settings for TSProfiler

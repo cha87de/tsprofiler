@@ -2,7 +2,7 @@ package impl
 
 func (profiler *profiler) listener() {
 	itemCount := 0
-	for {
+	for !profiler.stopped {
 		input := <-profiler.input
 		profiler.add(input)
 		itemCount++

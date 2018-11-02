@@ -20,12 +20,15 @@ type profiler struct {
 
 	metrics       []profilerMetric
 	metricsAccess *sync.Mutex
+
+	stopped bool
 }
 
 func (profiler *profiler) initialize(settings spec.Settings) {
 	profiler.input = make(chan spec.TSData, 10)
 	profiler.settings = settings
 	profiler.metricsAccess = &sync.Mutex{}
+	profiler.stopped = false
 	go profiler.profileOutputRunner()
 	go profiler.listener()
 }
@@ -33,6 +36,12 @@ func (profiler *profiler) initialize(settings spec.Settings) {
 // Put adds a TSData item to the profiler
 func (profiler *profiler) Put(data spec.TSData) {
 	profiler.input <- data
+}
+
+// Terminate stops and removes the profiler
+func (profiler *profiler) Terminate() {
+	profiler.stopped = true
+	close(profiler.input)
 }
 
 func (profiler *profiler) getMetricProfiler(name string) *profilerMetric {
