@@ -9,4 +9,5 @@ type TSData struct {
 type TSDataMetric struct {
 	Name  string
 	Value float64
+	Max   float64
 }

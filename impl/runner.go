@@ -33,6 +33,7 @@ func (profiler *profiler) output() {
 		metrics = append(metrics, spec.TSProfileMetric{
 			Name:     metricProfiler.name,
 			TXMatrix: txmatrix,
+			Stats:    metricProfiler.counts.stats,
 		})
 	}
 	profiler.metricsAccess.Unlock()

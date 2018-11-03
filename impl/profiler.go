@@ -66,6 +66,6 @@ func (profiler *profiler) getMetricProfiler(name string) *profilerMetric {
 func (profiler *profiler) add(data spec.TSData) {
 	for _, metric := range data.Metrics {
 		metricProfiler := profiler.getMetricProfiler(metric.Name)
-		metricProfiler.buffer.append(metric.Value)
+		metricProfiler.buffer.append(metric.Value, metric.Max)
 	}
 }

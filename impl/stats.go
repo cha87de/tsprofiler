@@ -44,7 +44,6 @@ func discretize(value float64, maxstate int, min float64, max float64) state {
 	stateStepValue := min
 	stateValue := int64(-1)
 	for stateStepValue < max {
-
 		if value < stateStepValue {
 			return state{
 				value: stateValue,
