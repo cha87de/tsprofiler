@@ -25,7 +25,7 @@ type profiler struct {
 }
 
 func (profiler *profiler) initialize(settings spec.Settings) {
-	profiler.input = make(chan spec.TSData, 10)
+	profiler.input = make(chan spec.TSData, 0)
 	profiler.settings = settings
 	profiler.metricsAccess = &sync.Mutex{}
 	profiler.stopped = false
@@ -36,6 +36,11 @@ func (profiler *profiler) initialize(settings spec.Settings) {
 // Put adds a TSData item to the profiler
 func (profiler *profiler) Put(data spec.TSData) {
 	profiler.input <- data
+}
+
+// Get generates an returns a profile based on previously put data
+func (profiler *profiler) Get() spec.TSProfile {
+	return profiler.generateProfile()
 }
 
 // Terminate stops and removes the profiler

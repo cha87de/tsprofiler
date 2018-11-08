@@ -10,6 +10,9 @@ type TSProfiler interface {
 	// Put allows applications to provide a new TSData input to the profiler
 	Put(data TSData)
 
+	// Get generates an returns a profile based on previously put data
+	Get() TSProfile
+
 	// Terminate stops and removes the profiler
 	Terminate()
 }
@@ -25,7 +28,7 @@ type Settings struct {
 	// States defines the amount of states to discretize the measurements
 	States int
 
-	// OutputFreq controls the frequency in which the profiler calls the OutputCallback function
+	// OutputFreq controls the frequency in which the profiler calls the OutputCallback function (if not set, profile has to be retrieved manually)
 	OutputFreq time.Duration
 
 	// OutputCallback defines the callback function for `TSProfile`s every `OutputFreq`

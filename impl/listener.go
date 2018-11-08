@@ -8,7 +8,7 @@ func (profiler *profiler) listener() {
 		itemCount++
 		if itemCount > profiler.settings.BufferSize {
 			// buffer is full, trigger profiler
-			go profiler.profile()
+			profiler.profile()
 			itemCount = 0
 		}
 	}

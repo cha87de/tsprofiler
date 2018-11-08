@@ -7,9 +7,14 @@ import (
 )
 
 func (profiler *profiler) profileOutputRunner() {
+	if profiler.settings.OutputCallback == nil || profiler.settings.OutputFreq == 0 {
+		// no automated output specified
+		return
+	}
 	for !profiler.stopped {
 		start := time.Now()
-		profiler.output()
+		profile := profiler.generateProfile()
+		profiler.settings.OutputCallback(profile)
 		nextRun := start.Add(profiler.settings.OutputFreq)
 		time.Sleep(nextRun.Sub(time.Now()))
 	}
@@ -24,21 +29,21 @@ func (profiler *profiler) profile() {
 	profiler.metricsAccess.Unlock()
 }
 
-func (profiler *profiler) output() {
+func (profiler *profiler) generateProfile() spec.TSProfile {
 	var metrics []spec.TSProfileMetric
 	profiler.metricsAccess.Lock()
+	defer profiler.metricsAccess.Unlock()
 	for _, metricProfiler := range profiler.metrics {
 		txmatrix := computeProbabilities(metricProfiler.counts.stateChangeCounter)
-		//fmt.Printf("counter %+v, probs: %+v\n", metricProfiler.counts.stateChangeCounter, txmatrix)
+		// fmt.Printf("counter %+v, probs: %+v\n", metricProfiler.counts.stateChangeCounter, txmatrix)
 		metrics = append(metrics, spec.TSProfileMetric{
 			Name:     metricProfiler.name,
 			TXMatrix: txmatrix,
 			Stats:    metricProfiler.counts.stats,
 		})
 	}
-	profiler.metricsAccess.Unlock()
-	profiler.settings.OutputCallback(spec.TSProfile{
+	return spec.TSProfile{
 		Name:    profiler.settings.Name,
 		Metrics: metrics,
-	})
+	}
 }
