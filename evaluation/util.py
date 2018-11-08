@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from random import randint
+import matplotlib.pyplot as plt
 
 def getNextState(txmatrix, currentState):
     stateProbs = txmatrix[currentState]
@@ -51,3 +52,20 @@ def aggregate(values, max):
     window_sz = math.floor(len(inarr) / max)
     outarr = inarr.reshape(-1,window_sz).mean(1) 
     return outarr
+
+def printTSPlot(name, values):
+    plt.figure(figsize=(16,9))
+    plt.plot(values, linewidth=0.8)
+    plt.savefig("tsplot-" + name + ".png",  dpi=199)
+    plt.clf()
+    plt.close()
+    plt.cla()
+
+def printTXPlot(values):
+    plt.imshow(values, cmap='Greys')
+    plt.colorbar()
+    plt.savefig("txplot.png")
+    plt.clf()
+    plt.close()
+    plt.cla()
+

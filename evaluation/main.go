@@ -60,7 +60,7 @@ func putMeasurement(utilValue float64) {
 	metrics = append(metrics, spec.TSDataMetric{
 		Name:  "example",
 		Value: utilValue,
-		Max:   float64(256),
+		Max:   float64(100), // TODO get from data dynamically
 	})
 	tsdata := spec.TSData{
 		Metrics: metrics,

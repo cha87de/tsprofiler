@@ -8,6 +8,9 @@ How to run an evaluation cycle with TSProfiler:
 
 ## Evaluation Output
 
+Original time series (cpu utilisation):
+![Example: original utilisation from tsinput.csv](./tsplot-original.png)
+
 1. the tx matrix
 ![Example: TX Matrix from tsinput.csv](./txplot.png)
 

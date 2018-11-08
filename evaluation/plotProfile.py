@@ -4,22 +4,7 @@ import json
 import matplotlib.pyplot as plt
 import sys
 import argparse
-
-def printTSPlot(name, values):
-    plt.figure(figsize=(16,9))
-    plt.plot(values, linewidth=0.8)
-    plt.savefig("tsplot-" + name + ".png",  dpi=199)
-    plt.clf()
-    plt.close()
-    plt.cla()
-
-def printTXPlot(values):
-    plt.imshow(values, cmap='Greys')
-    plt.colorbar()
-    plt.savefig("txplot.png")
-    plt.clf()
-    plt.close()
-    plt.cla()
+from util import printTSPlot, printTXPlot
 
 def simulateTX(metric, length):
     output = []
