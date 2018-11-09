@@ -1,9 +1,11 @@
 package impl
 
 import (
+	"math"
 	"sync"
 
 	"github.com/cha87de/tsprofiler/spec"
+	"gonum.org/v1/gonum/stat"
 )
 
 func newProfilerMetric(name string, maxstates int) profilerMetric {
@@ -32,8 +34,9 @@ type profilerMetric struct {
 func (profilerMetric *profilerMetric) countBuffer() {
 	rawData, max := profilerMetric.buffer.reset()
 	avg := avg(rawData)
+	//sum := sumFloat(rawData)
 	//min := min(rawData)
-	stddev := stddev(rawData)
+	// stddev := stddev(rawData)
 	min := float64(0)
 	newState := discretize(avg, profilerMetric.counts.maxstates, min, max)
 
@@ -46,10 +49,22 @@ func (profilerMetric *profilerMetric) countBuffer() {
 	// fmt.Printf("value: %+v, oldState: %+v, newState: %+v\n", avg, oldState, newState)
 	profilerMetric.counts.stateChangeCounter[oldState.value][newState.value]++
 	profilerMetric.counts.currentState.value = newState.value
-	profilerMetric.counts.stats.Avg = avg
-	profilerMetric.counts.stats.Min = min
-	profilerMetric.counts.stats.Max = max
-	profilerMetric.counts.stats.Stddev = stddev
+
+	// update global stats
+	if profilerMetric.counts.stats.Min > min {
+		profilerMetric.counts.stats.Min = min
+	}
+	if profilerMetric.counts.stats.Max < max {
+		profilerMetric.counts.stats.Max = max
+	}
+	oldAvg := profilerMetric.counts.stats.Avg
+	profilerMetric.counts.stats.Avg = stat.Mean([]float64{profilerMetric.counts.stats.Avg, avg}, []float64{float64(profilerMetric.counts.stats.Count), float64(len(rawData))})
+	profilerMetric.counts.stats.Count += int64(len(rawData))
+	for _, v := range rawData {
+		profilerMetric.counts.stats.StddevSum += (v - oldAvg) * (v - profilerMetric.counts.stats.Avg)
+	}
+	profilerMetric.counts.stats.Stddev = math.Sqrt(profilerMetric.counts.stats.StddevSum / float64(profilerMetric.counts.stats.Count))
+
 }
 
 type profilerMetricBuffer struct {
@@ -89,5 +104,10 @@ func (counts *profilerMetricCounts) reset() {
 	counts.currentState = state{
 		value: 0,
 	}
-	counts.stats = spec.TSStats{}
+	counts.stats = spec.TSStats{
+		Avg:       0.0,
+		Stddev:    0.0,
+		Count:     0.0,
+		StddevSum: 0.0,
+	}
 }

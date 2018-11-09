@@ -121,7 +121,7 @@ func profileOutput() {
 	profile := profiler.Get()
 	json, err := json.Marshal(profile)
 	if err != nil {
-		fmt.Printf("cannot create json: %s (original: %v)\n", err, profile)
+		fmt.Printf("cannot create json: %s (original: %+v)\n", err, profile)
 		return
 	}
 	fmt.Printf("%s\n", json)
