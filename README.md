@@ -2,8 +2,9 @@
 
 *a profiler for time series data*
 
+[![Build Status](https://travis-ci.org/cha87de/tsprofiler.svg?branch=master)](https://travis-ci.org/cha87de/tsprofiler)
 [![GoDoc](https://godoc.org/github.com/cha87de/tsprofiler/impl?status.svg)](https://godoc.org/github.com/cha87de/tsprofiler/impl)
-[![GoDoc](https://godoc.org/github.com/cha87de/tsprofiler/spec?status.svg)](https://godoc.org/github.com/cha87de/tsprofiler/spec)
+
 
 ## Purpose
 
