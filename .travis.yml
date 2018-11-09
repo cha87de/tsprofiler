@@ -1,0 +1,15 @@
+language: go
+go:
+  - '1.9' 
+
+install:
+  - "go get -d -v ./..."
+  - "go install ./..."
+  - "cp $GOPATH/bin/csv2tsprofile ."
+
+deploy:
+  - provider: script
+    script: curl -sL https://git.io/goreleaser | bash
+    on:
+      tags: true
+      condition: $TRAVIS_OS_NAME = linux
