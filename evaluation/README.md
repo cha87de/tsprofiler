@@ -16,7 +16,7 @@ CPU Utilisation
 **Profile Output**
 
 ```json
-{"name":"tsinput","metrics":[{"name":"metric_1","txmatrix":[[94,4,0,2],[17,67,17,0],[0,7,55,38],[0,1,15,84]],"stats":{"min":0,"max":100,"stddev":0.4044010715284039,"avg":11.7645295056}}]}
+{"name":"csv2tsprofile","metrics":[{"name":"metric_0","txmatrix":[[94,4,0,2],[17,67,17,0],[0,7,55,38],[0,1,15,84]],"stats":{"min":0,"max":100,"stddev":34.41679231194708,"avg":61.65461041032441,"count":2420}}]}
 ```
 
 ![Example: TX Matrix from tsinput.csv](./results/txplot.png)
