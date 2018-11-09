@@ -2,6 +2,8 @@ import numpy as np
 import math
 from random import randint
 import matplotlib.pyplot as plt
+import csv
+import sys
 
 def getNextState(txmatrix, currentState):
     stateProbs = txmatrix[currentState]
@@ -34,7 +36,7 @@ def weighted_choice(sequence, weights):
 
 def getSimTXValue(txmatrix, currentState, min, max, stddev):
     states = len(txmatrix[currentState])
-    stateSize = (max-min) / states
+    stateSize = round((max-min) / states)
     value = min + currentState * stateSize
     value += randint(0, stateSize) * (stddev/max) # add noise    
     return value
@@ -56,7 +58,7 @@ def aggregate(values, max):
 def printTSPlot(name, values):
     plt.figure(figsize=(16,9))
     plt.plot(values, linewidth=0.8)
-    plt.savefig("tsplot-" + name + ".png",  dpi=199)
+    plt.savefig("results/tsplot-" + name + ".png",  dpi=199)
     plt.clf()
     plt.close()
     plt.cla()
@@ -64,8 +66,51 @@ def printTSPlot(name, values):
 def printTXPlot(values):
     plt.imshow(values, cmap='Greys')
     plt.colorbar()
-    plt.savefig("txplot.png")
+    plt.savefig("results/txplot.png")
     plt.clf()
     plt.close()
     plt.cla()
 
+
+def readTsValues(filename):
+    values = []
+    reader = csv.reader(open(filename), delimiter=' ')
+    for row in reader:
+        try:
+            if len(row) >= 1:
+                values.append(float(row[0]))
+        except ValueError:
+            pass
+    return values
+
+def simulateTX(metric, length):
+    output = []
+    currentState = 0
+    for x in range(length):
+        txmatrix = metric["txmatrix"]
+        max = metric["stats"]["max"]
+        min = metric["stats"]["min"]
+        stddev = metric["stats"]["stddev"]
+
+        currentState = getNextState(txmatrix, currentState)
+
+        simValue = getSimTXValue(txmatrix, currentState, min, max, stddev)
+        output.append(simValue)
+
+        sys.stdout.write("{}/{}\r".format(x, length))
+    sys.stdout.write("\n")
+    return output
+
+def simulateAvg(metric, length):
+    output = []
+    currentState = 0
+    for x in range(length):
+        avg = metric["stats"]["avg"]
+        max = metric["stats"]["max"]
+        min = metric["stats"]["min"]
+        stddev = metric["stats"]["stddev"]
+        simValue = getSimAvgValue(avg, min, max, stddev)
+        output.append(simValue)
+        sys.stdout.write("{}/{}\r".format(x, length))
+    sys.stdout.write("\n")        
+    return output

@@ -1,42 +1,33 @@
 #!/usr/bin/python
-from util import getNextState, getSimTXValue, getSimAvgValue, aggregate
+#######################################
+# plotProfile - plots a tsprofiler profile's tx matrix, simulates and plots
+# time series from a profile using the a) average and b) the tx matrix.
+#
+# usage: plotProfile.py [-h] [--simlength SIMLENGTH] [--graphlength GRAPHLENGTH]
+#                       profile metric
+# 
+# Print a TSProfiler profile.
+# 
+# positional arguments:
+#   profile               the file which contains the profile as json
+#   metric                specifies the metric name to use, which must be set in
+#                         the profile
+# 
+# optional arguments:
+#   -h, --help            show this help message and exit
+#   --simlength SIMLENGTH
+#                         amount of time points to simulate
+#   --graphlength GRAPHLENGTH
+#                         amount of time points in the plotted graph. if less
+#                         than simlength, values are aggregated
+#
+# Author: Christopher Hauser <post@c-ha.de>
+#######################################
+from util import getNextState, getSimTXValue, getSimAvgValue, aggregate, simulateTX, simulateAvg
 import json
 import matplotlib.pyplot as plt
-import sys
 import argparse
 from util import printTSPlot, printTXPlot
-
-def simulateTX(metric, length):
-    output = []
-    currentState = 0
-    for x in range(length):
-        txmatrix = metric["txmatrix"]
-        max = metric["stats"]["max"]
-        min = metric["stats"]["min"]
-        stddev = metric["stats"]["stddev"]
-
-        currentState = getNextState(txmatrix, currentState)
-
-        simValue = getSimTXValue(txmatrix, currentState, min, max, stddev)
-        output.append(simValue)
-
-        sys.stdout.write("{}/{}\r".format(x, length))
-    sys.stdout.write("\n")
-    return output
-
-def simulateAvg(metric, length):
-    output = []
-    currentState = 0
-    for x in range(length):
-        avg = metric["stats"]["avg"]
-        max = metric["stats"]["max"]
-        min = metric["stats"]["min"]
-        stddev = metric["stats"]["stddev"]
-        simValue = getSimAvgValue(avg, min, max, stddev)
-        output.append(simValue)
-        sys.stdout.write("{}/{}\r".format(x, length))
-    sys.stdout.write("\n")        
-    return output
 
 def main(file, metricName, simlength, graphlength):
     # read profile from json file

@@ -1,0 +1,10 @@
+#!/usr/bin/python
+from util import printTSPlot, readTsValues
+
+def main():
+    tsvalues = readTsValues("tsinput.csv")
+
+    # print line graph
+    printTSPlot("original", tsvalues)  
+
+main()

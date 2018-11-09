@@ -1,0 +1,32 @@
+#!/usr/bin/python
+#######################################
+# evalDiff - simulates time series from a profile, compares with original trace,
+# to calculate the diff between simulation and real measurement
+#
+# Author: Christopher Hauser <post@c-ha.de>
+#######################################
+import json
+from util import readTsValues, simulateTX, simulateAvg
+
+def main():
+    file = "results/profile.json"
+
+    with open(file) as f:
+        profile = json.load(f)
+        metric = profile["metrics"][0]
+        originalTS = readTsValues("tsinput.csv")
+        simulationTXTS = simulateTX(metric, len(originalTS))
+        simulationAVGTS = simulateAvg(metric, len(originalTS))
+        
+        diffTx = 0
+        diffAvg = 0
+        for i in range(len(originalTS)):
+            diffTxi = originalTS[i] - simulationTXTS[i]
+            diffAvgi = originalTS[i] - simulationAVGTS[i]
+            diffTx += diffTxi
+            diffAvg += diffAvgi
+
+        print("diffTx: \t", diffTx)
+        print("diffAvg:\t", diffAvg)
+
+main()
