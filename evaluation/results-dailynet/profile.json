@@ -1,0 +1,1 @@
+{"name":"csv2tsprofile","metrics":[{"name":"metric_0","txmatrix":[[0,0,0,100],[0,0,0,0],[0,0,0,0],[0,0,0,100]],"stats":{"min":0,"max":100,"stddev":463811351.65444374,"avg":780208186.4787755,"count":1440},"Pattern":{"State":0,"StatePattern":[{"State":3,"StatePattern":null,"Count":129,"Closed":false}],"Count":1,"Closed":false}}]}
