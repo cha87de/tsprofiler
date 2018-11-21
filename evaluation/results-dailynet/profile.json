@@ -1,1 +1,1 @@
-{"name":"csv2tsprofile","metrics":[{"name":"metric_0","txmatrix":[[0,0,0,100],[0,0,0,0],[0,0,0,0],[0,0,0,100]],"stats":{"min":0,"max":100,"stddev":463811351.65444374,"avg":780208186.4787755,"count":1440},"Pattern":{"State":0,"StatePattern":[{"State":3,"StatePattern":null,"Count":129,"Closed":false}],"Count":1,"Closed":false}}]}
+{"name":"csv2tsprofile","metrics":[{"name":"metric_0","txmatrix":[[98,2,0,0],[17,83,0,0],[0,0,75,25],[0,0,100,0]],"stats":{"min":71439257.6,"max":1801968605.867,"stddev":392863418.66913867,"avg":745564284.4539043,"count":1408}}]}
