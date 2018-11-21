@@ -66,9 +66,10 @@ func initializeFlags() {
 
 func initProfiler() {
 	profiler = impl.NewProfiler(spec.Settings{
-		Name:       "csv2tsprofile",
-		BufferSize: options.BufferSize,
-		States:     options.States,
+		Name:          "csv2tsprofile",
+		BufferSize:    options.BufferSize,
+		States:        options.States,
+		FilterStdDevs: 3,
 	})
 }
 
@@ -108,7 +109,6 @@ func putMeasurement(utilValue []float64) {
 		metrics = append(metrics, spec.TSDataMetric{
 			Name:  fmt.Sprintf("metric_%d", i),
 			Value: value,
-			Max:   float64(100), // TODO get from data dynamically
 		})
 	}
 	tsdata := spec.TSData{

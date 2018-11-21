@@ -61,7 +61,7 @@ func (profiler *profiler) getMetricProfiler(name string) *profilerMetric {
 	}
 
 	// still here? create the profilerMetric
-	metricProfiler := newProfilerMetric(name, profiler.settings.States)
+	metricProfiler := newProfilerMetric(name, profiler.settings.States, profiler.settings.FilterStdDevs)
 	profiler.metrics = append(profiler.metrics, metricProfiler)
 
 	profiler.metricsAccess.Unlock()
@@ -71,6 +71,11 @@ func (profiler *profiler) getMetricProfiler(name string) *profilerMetric {
 func (profiler *profiler) add(data spec.TSData) {
 	for _, metric := range data.Metrics {
 		metricProfiler := profiler.getMetricProfiler(metric.Name)
-		metricProfiler.buffer.append(metric.Value, metric.Max)
+		isOutlier := metricProfiler.isOutlier(metric.Value)
+		if !isOutlier {
+			metricProfiler.buffer.append(metric.Value)
+			// } else {
+			// fmt.Printf("skipped outlier %0.f\n", metric.Value)
+		}
 	}
 }

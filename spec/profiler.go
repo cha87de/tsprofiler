@@ -28,6 +28,9 @@ type Settings struct {
 	// States defines the amount of states to discretize the measurements
 	States int
 
+	// FilterStdDevs defines the amount of stddevs which are max. allowed for data items before skipped as outliers
+	FilterStdDevs int
+
 	// OutputFreq controls the frequency in which the profiler calls the OutputCallback function (if not set, profile has to be retrieved manually)
 	OutputFreq time.Duration
 
