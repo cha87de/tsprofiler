@@ -43,7 +43,7 @@ def getSimTXValue(txmatrix, currentState, min, max, stddev):
 
 def getSimAvgValue(avg, min, max, stddev):
     value = avg
-    value += randint(max*-1, max) * (stddev/max) # add noise
+    value += randint(round(max*-1), round(max)) * (stddev/max) # add noise
     return value
 
 def aggregate(values, max):
