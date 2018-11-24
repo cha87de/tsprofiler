@@ -3,13 +3,15 @@ package impl
 import (
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/cha87de/tsprofiler/spec"
 	"gonum.org/v1/gonum/stat"
 )
 
-func newProfilerMetric(name string, maxstates int, filterStdDevs int) profilerMetric {
+func newProfilerMetric(name string, maxstates int, history int, filterStdDevs int) profilerMetric {
 	metric := profilerMetric{
 		name: name,
 		buffer: &profilerMetricBuffer{
@@ -20,6 +22,7 @@ func newProfilerMetric(name string, maxstates int, filterStdDevs int) profilerMe
 		},
 		counts: &profilerMetricCounts{
 			maxstates: maxstates,
+			history:   history,
 			// rest will be initialized via counts.reset()
 		},
 	}
@@ -60,8 +63,21 @@ func (profilerMetric *profilerMetric) countBuffer() {
 
 	// count new state transition
 	oldState := profilerMetric.counts.currentState
-	profilerMetric.counts.stateChangeCounter[oldState.value][newState.value]++
-	profilerMetric.counts.currentState.value = newState.value
+
+	oldStateIdent := ""
+	for _, state := range oldState {
+		if oldStateIdent != "" {
+			oldStateIdent = oldStateIdent + "-"
+		}
+		oldStateIdent = oldStateIdent + fmt.Sprintf("%d", state.value)
+	}
+	_, ok := profilerMetric.counts.stateChangeCounter[oldStateIdent]
+	if !ok {
+		profilerMetric.counts.stateChangeCounter[oldStateIdent] = make([]int64, profilerMetric.counts.maxstates)
+	}
+	profilerMetric.counts.stateChangeCounter[oldStateIdent][newState.value]++
+	profilerMetric.counts.currentState = profilerMetric.counts.currentState[1:]               // remove first item
+	profilerMetric.counts.currentState = append(profilerMetric.counts.currentState, newState) // add new item at the end
 
 	// update global stats
 	oldAvg := profilerMetric.counts.stats.Avg
@@ -105,18 +121,19 @@ func (buffer *profilerMetricBuffer) reset() ([]float64, float64, float64) {
 
 type profilerMetricCounts struct {
 	maxstates          int
-	currentState       state
-	stateChangeCounter [][]int64
+	history            int
+	currentState       []state
+	stateChangeCounter map[string][]int64
 	stats              spec.TSStats
 }
 
 func (counts *profilerMetricCounts) reset() {
-	counts.stateChangeCounter = make([][]int64, counts.maxstates)
-	for i := range counts.stateChangeCounter {
-		counts.stateChangeCounter[i] = make([]int64, counts.maxstates)
-	}
-	counts.currentState = state{
-		value: 0,
+	counts.stateChangeCounter = make(map[string][]int64)
+	counts.currentState = make([]state, counts.history)
+	for i := range counts.currentState {
+		counts.currentState[i] = state{
+			value: 0,
+		}
 	}
 	counts.stats = spec.TSStats{
 		Min:       -1,
@@ -130,50 +147,64 @@ func (counts *profilerMetricCounts) reset() {
 
 // changeDimension recomputes the state counter values for the new min/max dimension
 func (counts *profilerMetricCounts) changeDimension(min float64, max float64) {
-	newCounterMatrix := make([][]int64, counts.maxstates)
-	for i := range newCounterMatrix {
-		newCounterMatrix[i] = make([]int64, counts.maxstates)
-	}
+	newCounterMatrix := make(map[string][]int64)
 
 	oldMin := counts.stats.Min
 	oldMax := counts.stats.Max
 	maxstate := counts.maxstates
 	oldStateStepSize := float64(oldMax-oldMin) / float64(maxstate)
 
-	for i := range counts.stateChangeCounter {
-		valueI := float64(0)
-		newStateI := state{
-			value: -1,
-		}
-		for j := range counts.stateChangeCounter[i] {
-			oldCounter := counts.stateChangeCounter[i][j]
+	for key := range counts.stateChangeCounter {
+		var newKey string
+		for j := range counts.stateChangeCounter[key] {
+			oldCounter := counts.stateChangeCounter[key][j]
 			// were there any occurrences at all?
 			if oldCounter <= 0 {
 				continue
 			}
 
-			if newStateI.value == -1 {
+			if newKey == "" {
 				// lazy compute: state for i not yet calculated
-				valueI = float64(i) * oldStateStepSize
-				valueI += oldMin
-				newStateI = discretize(valueI, maxstate, min, max)
+				keyParts := strings.Split(key, "-")
+				for _, keyPart := range keyParts {
+					i, err := strconv.ParseInt(keyPart, 10, 32)
+					if err != nil {
+						i = 0
+					}
+					valueIpart := float64(i) * oldStateStepSize
+					valueIpart += oldMin
+					newStateIpart := discretize(valueIpart, maxstate, min, max)
+					if newStateIpart.value < 0 || newStateIpart.value >= int64(maxstate) {
+						fmt.Printf("no valid state found (iI). %.0f + %.0f * %s = %.0f (min %v, max %v, oldmin %v, oldmax %v)\n", oldMin, oldStateStepSize, key, valueIpart, min, max, oldMin, oldMax)
+						// no state found
+						newKey = ""
+						break
+					}
+					if newKey != "" {
+						newKey = newKey + "-"
+					}
+					newKey = newKey + fmt.Sprintf("%d", newStateIpart.value)
+				}
+			}
+			if newKey == "" {
+				// if still empty, we have invalid states
+				continue
 			}
 			valueJ := float64(j) * oldStateStepSize
 			valueJ += oldMin
 			newStateJ := discretize(valueJ, maxstate, min, max)
 
-			if newStateI.value < 0 || newStateI.value >= int64(maxstate) {
-				fmt.Printf("no valid state found (iI). %.0f + %.0f * %d = %.0f (min %v, max %v, oldmin %v, oldmax %v)\n", oldMin, oldStateStepSize, i, valueI, min, max, oldMin, oldMax)
-				// no state found
-				continue
-			}
 			if newStateJ.value < 0 || newStateJ.value >= int64(maxstate) {
 				fmt.Printf("no valid state found (iJ) for value %v (min: %v, max %v, j: %v, stepsize: %v)\n", valueJ, min, max, j, oldStateStepSize)
 				// no state found
 				continue
 			}
 			//fmt.Printf("%+v,%+v\n", newStateI.value, newStateJ.value)
-			newCounterMatrix[newStateI.value][newStateJ.value] += oldCounter
+			_, ok := newCounterMatrix[newKey]
+			if !ok {
+				newCounterMatrix[newKey] = make([]int64, counts.maxstates)
+			}
+			newCounterMatrix[newKey][newStateJ.value] += oldCounter
 		}
 	}
 	counts.stateChangeCounter = newCounterMatrix

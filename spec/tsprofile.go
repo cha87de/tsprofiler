@@ -18,7 +18,7 @@ type TSStats struct {
 
 // TSProfileMetric describes for one metric a statistical profile
 type TSProfileMetric struct {
-	Name     string  `json:"name"`
-	TXMatrix [][]int `json:"txmatrix"`
-	Stats    TSStats `json:"stats"`
+	Name     string           `json:"name"`
+	TXMatrix map[string][]int `json:"txmatrix"`
+	Stats    TSStats          `json:"stats"`
 }

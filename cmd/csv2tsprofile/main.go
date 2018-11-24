@@ -17,6 +17,7 @@ import (
 var options struct {
 	States     int `long:"states" default:"4"`
 	BufferSize int `long:"buffersize" default:"10"`
+	History    int `long:"history" default:"1"`
 	Inputfile  string
 }
 
@@ -70,6 +71,7 @@ func initProfiler() {
 		BufferSize:    options.BufferSize,
 		States:        options.States,
 		FilterStdDevs: 3,
+		History:       options.History,
 	})
 }
 

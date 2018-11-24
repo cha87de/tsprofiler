@@ -61,7 +61,7 @@ func (profiler *profiler) getMetricProfiler(name string) *profilerMetric {
 	}
 
 	// still here? create the profilerMetric
-	metricProfiler := newProfilerMetric(name, profiler.settings.States, profiler.settings.FilterStdDevs)
+	metricProfiler := newProfilerMetric(name, profiler.settings.States, profiler.settings.History, profiler.settings.FilterStdDevs)
 	profiler.metrics = append(profiler.metrics, metricProfiler)
 
 	profiler.metricsAccess.Unlock()

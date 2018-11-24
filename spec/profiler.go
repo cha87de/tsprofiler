@@ -28,6 +28,9 @@ type Settings struct {
 	// States defines the amount of states to discretize the measurements
 	States int
 
+	// History defines the amount of previous, historic state changes to be considered
+	History int
+
 	// FilterStdDevs defines the amount of stddevs which are max. allowed for data items before skipped as outliers
 	FilterStdDevs int
 

@@ -57,9 +57,10 @@ func discretize(value float64, maxstate int, min float64, max float64) state {
 	}
 }
 
-func computeProbabilities(statematrix [][]int64) [][]int {
-	var output [][]int
-	for _, row := range statematrix {
+func computeProbabilities(statematrix map[string][]int64) map[string][]int {
+	var output map[string][]int
+	output = make(map[string][]int)
+	for key, row := range statematrix {
 		sum := sum(row)
 		var rowPerc []int
 		for _, v := range row {
@@ -72,7 +73,9 @@ func computeProbabilities(statematrix [][]int64) [][]int {
 			fracInt := int(round(frac))
 			rowPerc = append(rowPerc, fracInt)
 		}
-		output = append(output, rowPerc)
+		//output = append(output, rowPerc)
+		output[key] = rowPerc
+
 	}
 	return output
 }
