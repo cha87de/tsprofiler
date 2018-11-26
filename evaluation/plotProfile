@@ -47,7 +47,8 @@ def main(file, metricName, simlength, graphlength):
             return
 
         # first: print txmatrix
-        printTXPlot(metric["txmatrix"])
+        # TODO fix txplot to handle x axis
+        #printTXPlot(metric["txmatrix"])
 
         # second: run simulation
         print("start tx simulation")

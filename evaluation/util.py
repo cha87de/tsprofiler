@@ -6,10 +6,13 @@ import csv
 import sys
 
 def getNextState(txmatrix, currentState):
-    stateProbs = txmatrix[currentState]
+    stateProbs = txmatrix[currentState]["nextProbs"]
     validStates = [i for i in range(len(stateProbs))]
     nextState = weighted_choice(validStates, stateProbs)
-    return nextState
+    parts = currentState.split("-")
+    del parts[0]
+    parts.append(str(nextState))
+    return "-".join(parts)
 
 def find_interval(x, partition):
     """ find_interval -> i
@@ -37,7 +40,9 @@ def weighted_choice(sequence, weights):
 def getSimTXValue(txmatrix, currentState, min, max, stddev):
     states = len(txmatrix[currentState])
     stateSize = round((max-min) / states)
-    value = min + currentState * stateSize
+    parts = currentState.split("-")
+    stateValue = int(parts[len(parts)-1])
+    value = min + stateValue * stateSize
     value += randint(0, stateSize) * (stddev/max) # add noise    
     return value
 
@@ -85,14 +90,26 @@ def readTsValues(filename):
 
 def simulateTX(metric, length):
     output = []
-    currentState = 0
+    currentState = "0" # TODO get history count
+    txmatrix = metric["txmatrix"]
+    max = metric["stats"]["max"]
+    min = metric["stats"]["min"]
+    stddev = metric["stats"]["stddev"]    
     for x in range(length):
-        txmatrix = metric["txmatrix"]
-        max = metric["stats"]["max"]
-        min = metric["stats"]["min"]
-        stddev = metric["stats"]["stddev"]
-
         currentState = getNextState(txmatrix, currentState)
+        if not currentState in txmatrix:
+            print("no exact state found")
+            currentStateMin = currentState
+            while len(currentStateMin) > 0:
+                parts = currentStateMin.split("-")
+                if len(parts) <= 0:
+                    break
+                del parts[0]
+                currentStateMin = "-".join(parts)
+                if currentStateMin in txmatrix:
+                    # found a match
+                    currentState = currentStateMin
+                    break
 
         simValue = getSimTXValue(txmatrix, currentState, min, max, stddev)
         output.append(simValue)
