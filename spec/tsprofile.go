@@ -2,8 +2,9 @@ package spec
 
 // TSProfile contains the resulting statistical profile
 type TSProfile struct {
-	Name    string            `json:"name"`
-	Metrics []TSProfileMetric `json:"metrics"`
+	Name     string            `json:"name"`
+	Metrics  []TSProfileMetric `json:"metrics"`
+	Settings Settings          `json:"settings"`
 }
 
 // TSStats contains default statistics
@@ -18,7 +19,13 @@ type TSStats struct {
 
 // TSProfileMetric describes for one metric a statistical profile
 type TSProfileMetric struct {
-	Name     string           `json:"name"`
-	TXMatrix map[string][]int `json:"txmatrix"`
-	Stats    TSStats          `json:"stats"`
+	Name     string            `json:"name"`
+	TXMatrix map[string]TXStep `json:"txmatrix"`
+	Stats    TSStats           `json:"stats"`
+}
+
+// TXStep expresses a single state in a markov chain / transition matrix
+type TXStep struct {
+	NextStateProbs []int `json:"nextProbs"`
+	StepProb       int   `json:"probability"`
 }

@@ -64,18 +64,22 @@ func (profilerMetric *profilerMetric) countBuffer() {
 	// count new state transition
 	oldState := profilerMetric.counts.currentState
 
-	oldStateIdent := ""
-	for _, state := range oldState {
-		if oldStateIdent != "" {
-			oldStateIdent = oldStateIdent + "-"
+	for len(oldState) > 0 {
+		oldStateIdent := ""
+		for _, state := range oldState {
+			if oldStateIdent != "" {
+				oldStateIdent = oldStateIdent + "-"
+			}
+			oldStateIdent = oldStateIdent + fmt.Sprintf("%d", state.value)
 		}
-		oldStateIdent = oldStateIdent + fmt.Sprintf("%d", state.value)
+		_, ok := profilerMetric.counts.stateChangeCounter[oldStateIdent]
+		if !ok {
+			profilerMetric.counts.stateChangeCounter[oldStateIdent] = make([]int64, profilerMetric.counts.maxstates)
+		}
+		profilerMetric.counts.stateChangeCounter[oldStateIdent][newState.value]++
+		oldState = oldState[1:]
 	}
-	_, ok := profilerMetric.counts.stateChangeCounter[oldStateIdent]
-	if !ok {
-		profilerMetric.counts.stateChangeCounter[oldStateIdent] = make([]int64, profilerMetric.counts.maxstates)
-	}
-	profilerMetric.counts.stateChangeCounter[oldStateIdent][newState.value]++
+
 	profilerMetric.counts.currentState = profilerMetric.counts.currentState[1:]               // remove first item
 	profilerMetric.counts.currentState = append(profilerMetric.counts.currentState, newState) // add new item at the end
 

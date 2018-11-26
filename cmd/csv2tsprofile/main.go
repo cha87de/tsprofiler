@@ -15,10 +15,11 @@ import (
 )
 
 var options struct {
-	States     int `long:"states" default:"4"`
-	BufferSize int `long:"buffersize" default:"10"`
-	History    int `long:"history" default:"1"`
-	Inputfile  string
+	States        int `long:"states" default:"4"`
+	BufferSize    int `long:"buffersize" default:"10"`
+	History       int `long:"history" default:"1"`
+	FilterStdDevs int `long:"filterstddevs" default:"2"`
+	Inputfile     string
 }
 
 var profiler spec.TSProfiler
@@ -70,7 +71,7 @@ func initProfiler() {
 		Name:          "csv2tsprofile",
 		BufferSize:    options.BufferSize,
 		States:        options.States,
-		FilterStdDevs: 3,
+		FilterStdDevs: options.FilterStdDevs,
 		History:       options.History,
 	})
 }

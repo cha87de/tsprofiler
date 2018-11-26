@@ -4,6 +4,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/cha87de/tsprofiler/spec"
 	"gonum.org/v1/gonum/stat"
 )
 
@@ -57,9 +58,9 @@ func discretize(value float64, maxstate int, min float64, max float64) state {
 	}
 }
 
-func computeProbabilities(statematrix map[string][]int64) map[string][]int {
-	var output map[string][]int
-	output = make(map[string][]int)
+func computeProbabilities(statematrix map[string][]int64, maxCount float64) map[string]spec.TXStep {
+	var output map[string]spec.TXStep
+	output = make(map[string]spec.TXStep)
 	for key, row := range statematrix {
 		sum := sum(row)
 		var rowPerc []int
@@ -73,8 +74,11 @@ func computeProbabilities(statematrix map[string][]int64) map[string][]int {
 			fracInt := int(round(frac))
 			rowPerc = append(rowPerc, fracInt)
 		}
-		//output = append(output, rowPerc)
-		output[key] = rowPerc
+		stepProb := float64(sum) / maxCount * 100
+		output[key] = spec.TXStep{
+			NextStateProbs: rowPerc,
+			StepProb:       int(round(stepProb)),
+		}
 
 	}
 	return output

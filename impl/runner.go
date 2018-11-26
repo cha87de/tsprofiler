@@ -34,7 +34,8 @@ func (profiler *profiler) generateProfile() spec.TSProfile {
 	profiler.metricsAccess.Lock()
 	defer profiler.metricsAccess.Unlock()
 	for _, metricProfiler := range profiler.metrics {
-		txmatrix := computeProbabilities(metricProfiler.counts.stateChangeCounter)
+		maxCount := float64(metricProfiler.counts.stats.Count) / float64(profiler.settings.BufferSize)
+		txmatrix := computeProbabilities(metricProfiler.counts.stateChangeCounter, maxCount)
 		// fmt.Printf("counter %+v, probs: %+v\n", metricProfiler.counts.stateChangeCounter, txmatrix)
 		metrics = append(metrics, spec.TSProfileMetric{
 			Name:     metricProfiler.name,
@@ -43,7 +44,8 @@ func (profiler *profiler) generateProfile() spec.TSProfile {
 		})
 	}
 	return spec.TSProfile{
-		Name:    profiler.settings.Name,
-		Metrics: metrics,
+		Name:     profiler.settings.Name,
+		Metrics:  metrics,
+		Settings: profiler.settings,
 	}
 }

@@ -20,23 +20,23 @@ type TSProfiler interface {
 // Settings defines settings for TSProfiler
 type Settings struct {
 	// BufferSize defines the amount of TSData items before a new state is transitioned
-	BufferSize int
+	BufferSize int `json:"buffersize"`
 
 	// Name allows to identify the profiler, e.g. for human readable differentiation
-	Name string
+	Name string `json:"-"`
 
 	// States defines the amount of states to discretize the measurements
-	States int
+	States int `json:"states"`
 
 	// History defines the amount of previous, historic state changes to be considered
-	History int
+	History int `json:"history"`
 
 	// FilterStdDevs defines the amount of stddevs which are max. allowed for data items before skipped as outliers
-	FilterStdDevs int
+	FilterStdDevs int `json:"filterstddevs"`
 
 	// OutputFreq controls the frequency in which the profiler calls the OutputCallback function (if not set, profile has to be retrieved manually)
-	OutputFreq time.Duration
+	OutputFreq time.Duration `json:"-"`
 
 	// OutputCallback defines the callback function for `TSProfile`s every `OutputFreq`
-	OutputCallback func(data TSProfile)
+	OutputCallback func(data TSProfile) `json:"-"`
 }
