@@ -53,6 +53,9 @@ func discretize(value float64, maxstate int, min float64, max float64) state {
 		stateValue++
 		stateStepValue += stateStepSize
 	}
+	if min == 0 && max == 0 {
+		stateValue = 0
+	}
 	return state{
 		value: stateValue,
 	}

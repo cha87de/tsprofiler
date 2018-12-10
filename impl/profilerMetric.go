@@ -80,7 +80,9 @@ func (profilerMetric *profilerMetric) countBuffer() {
 		oldState = oldState[1:]
 	}
 
-	profilerMetric.counts.currentState = profilerMetric.counts.currentState[1:]               // remove first item
+	if len(profilerMetric.counts.currentState) > 0 {
+		profilerMetric.counts.currentState = profilerMetric.counts.currentState[1:] // remove first item
+	}
 	profilerMetric.counts.currentState = append(profilerMetric.counts.currentState, newState) // add new item at the end
 
 	// update global stats
