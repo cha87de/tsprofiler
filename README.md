@@ -32,12 +32,9 @@ profile = [
 ]
 ```
 
-![Example: CPU Utilisation](./evaluation/example.png)
-
-
 ## Usage Guide
 
-Create a new TSProfiler:
+*The API is still under development.* Create a new TSProfiler:
 
 ```go
 profiler = impl.NewProfiler(spec.Settings{
@@ -50,7 +47,7 @@ profiler = impl.NewProfiler(spec.Settings{
 
 func profileOutput(data spec.TSProfile) {
   // handle profiler output
-}      
+}
 ```
 
 Provide metric value to profiler:
