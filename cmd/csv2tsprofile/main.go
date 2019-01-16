@@ -15,10 +15,13 @@ import (
 )
 
 var options struct {
-	States        int `long:"states" default:"4"`
-	BufferSize    int `long:"buffersize" default:"10"`
-	History       int `long:"history" default:"1"`
-	FilterStdDevs int `long:"filterstddevs" default:"2"`
+	States        int     `long:"states" default:"4"`
+	BufferSize    int     `long:"buffersize" default:"10"`
+	History       int     `long:"history" default:"1"`
+	FilterStdDevs int     `long:"filterstddevs" default:"2"`
+	FixedBound    bool    `long:"fixedbound"`
+	FixedMin      float64 `long:"fixedmin" default:"0"`
+	FixedMax      float64 `long:"fixedmax" default:"100"`
 	Inputfile     string
 }
 
@@ -73,6 +76,7 @@ func initProfiler() {
 		States:        options.States,
 		FilterStdDevs: options.FilterStdDevs,
 		History:       options.History,
+		FixBound:      options.FixedBound,
 	})
 }
 
@@ -110,8 +114,10 @@ func putMeasurement(utilValue []float64) {
 	metrics := make([]spec.TSDataMetric, 0)
 	for i, value := range utilValue {
 		metrics = append(metrics, spec.TSDataMetric{
-			Name:  fmt.Sprintf("metric_%d", i),
-			Value: value,
+			Name:     fmt.Sprintf("metric_%d", i),
+			Value:    value,
+			FixedMin: options.FixedMin,
+			FixedMax: options.FixedMax,
 		})
 	}
 	tsdata := spec.TSData{

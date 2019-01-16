@@ -11,7 +11,7 @@ import (
 	"gonum.org/v1/gonum/stat"
 )
 
-func newProfilerMetric(name string, maxstates int, history int, filterStdDevs int) profilerMetric {
+func newProfilerMetric(name string, maxstates int, history int, filterStdDevs int, fixbound bool) profilerMetric {
 	metric := profilerMetric{
 		name: name,
 		buffer: &profilerMetricBuffer{
@@ -19,6 +19,7 @@ func newProfilerMetric(name string, maxstates int, history int, filterStdDevs in
 			access:        &sync.Mutex{},
 			min:           -1,
 			filterStdDevs: filterStdDevs,
+			fixbound:      fixbound,
 		},
 		counts: &profilerMetricCounts{
 			maxstates: maxstates,
@@ -102,16 +103,24 @@ type profilerMetricBuffer struct {
 	min           float64
 	max           float64
 	filterStdDevs int
+	fixbound      bool
 }
 
-func (buffer *profilerMetricBuffer) append(value float64) {
+func (buffer *profilerMetricBuffer) append(value spec.TSDataMetric) {
 	buffer.access.Lock()
-	buffer.rawData = append(buffer.rawData, value)
-	if value > buffer.max {
-		buffer.max = value
-	}
-	if buffer.min == -1 || value < buffer.min {
-		buffer.min = value
+	buffer.rawData = append(buffer.rawData, value.Value)
+	if buffer.fixbound {
+		// use fix min/max ranges
+		buffer.min = value.FixedMin
+		buffer.max = value.FixedMax
+	} else {
+		// dynamic min/max ranges
+		if value.Value > buffer.max {
+			buffer.max = value.Value
+		}
+		if buffer.min == -1 || value.Value < buffer.min {
+			buffer.min = value.Value
+		}
 	}
 	buffer.access.Unlock()
 }

@@ -34,6 +34,9 @@ type Settings struct {
 	// FilterStdDevs defines the amount of stddevs which are max. allowed for data items before skipped as outliers
 	FilterStdDevs int `json:"filterstddevs"`
 
+	// FixBound defines if min/max are fixed or dynamic depending on occurred values
+	FixBound bool `json:"fixbound"`
+
 	// OutputFreq controls the frequency in which the profiler calls the OutputCallback function (if not set, profile has to be retrieved manually)
 	OutputFreq time.Duration `json:"-"`
 

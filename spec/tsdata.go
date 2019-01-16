@@ -7,6 +7,8 @@ type TSData struct {
 
 // TSDataMetric describes profiler input for a single metrix
 type TSDataMetric struct {
-	Name  string
-	Value float64
+	Name     string
+	Value    float64
+	FixedMin float64
+	FixedMax float64
 }

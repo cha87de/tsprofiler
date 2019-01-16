@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/cha87de/tsprofiler/spec"
@@ -61,7 +62,7 @@ func (profiler *profiler) getMetricProfiler(name string) *profilerMetric {
 	}
 
 	// still here? create the profilerMetric
-	metricProfiler := newProfilerMetric(name, profiler.settings.States, profiler.settings.History, profiler.settings.FilterStdDevs)
+	metricProfiler := newProfilerMetric(name, profiler.settings.States, profiler.settings.History, profiler.settings.FilterStdDevs, profiler.settings.FixBound)
 	profiler.metrics = append(profiler.metrics, metricProfiler)
 
 	profiler.metricsAccess.Unlock()
@@ -71,11 +72,15 @@ func (profiler *profiler) getMetricProfiler(name string) *profilerMetric {
 func (profiler *profiler) add(data spec.TSData) {
 	for _, metric := range data.Metrics {
 		metricProfiler := profiler.getMetricProfiler(metric.Name)
-		isOutlier := metricProfiler.isOutlier(metric.Value)
+		isOutlier := false
+		if metricProfiler.buffer.filterStdDevs != -1 {
+			// if filter is set, check if it is an outlier
+			isOutlier = metricProfiler.isOutlier(metric.Value)
+		}
 		if !isOutlier {
-			metricProfiler.buffer.append(metric.Value)
-			// } else {
-			// fmt.Printf("skipped outlier %0.f\n", metric.Value)
+			metricProfiler.buffer.append(metric)
+		} else {
+			fmt.Printf("skipped outlier %0.f\n", metric.Value)
 		}
 	}
 }
