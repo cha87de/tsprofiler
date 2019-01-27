@@ -1,33 +1,8 @@
-package impl
+package profiler
 
 import (
-	"time"
-
 	"github.com/cha87de/tsprofiler/spec"
 )
-
-func (profiler *profiler) profileOutputRunner() {
-	if profiler.settings.OutputCallback == nil || profiler.settings.OutputFreq == 0 {
-		// no automated output specified
-		return
-	}
-	for !profiler.stopped {
-		start := time.Now()
-		profile := profiler.generateProfile()
-		profiler.settings.OutputCallback(profile)
-		nextRun := start.Add(profiler.settings.OutputFreq)
-		time.Sleep(nextRun.Sub(time.Now()))
-	}
-}
-
-// take profilers
-func (profiler *profiler) profile() {
-	profiler.metricsAccess.Lock()
-	for _, metricProfiler := range profiler.metrics {
-		metricProfiler.countBuffer()
-	}
-	profiler.metricsAccess.Unlock()
-}
 
 func (profiler *profiler) generateProfile() spec.TSProfile {
 	var metrics []spec.TSProfileMetric

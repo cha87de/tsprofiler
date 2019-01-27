@@ -9,20 +9,21 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cha87de/tsprofiler/impl"
 	"github.com/cha87de/tsprofiler/spec"
 	flags "github.com/jessevdk/go-flags"
 )
 
 var options struct {
-	States        int     `long:"states" default:"4"`
-	BufferSize    int     `long:"buffersize" default:"10"`
-	History       int     `long:"history" default:"1"`
-	FilterStdDevs int     `long:"filterstddevs" default:"2"`
-	FixedBound    bool    `long:"fixedbound"`
-	FixedMin      float64 `long:"fixedmin" default:"0"`
-	FixedMax      float64 `long:"fixedmax" default:"100"`
-	Inputfile     string
+	States            int     `long:"states" default:"4"`
+	BufferSize        int     `long:"buffersize" default:"10"`
+	History           int     `long:"history" default:"1"`
+	FilterStdDevs     int     `long:"filterstddevs" default:"2"`
+	FixedBound        bool    `long:"fixedbound"`
+	FixedMin          float64 `long:"fixedmin" default:"0" description:"if fixedbound is set, set the min value"`
+	FixedMax          float64 `long:"fixedmax" default:"100" description:"if fixedbound is set, set the max value"`
+	PeriodSize        string  `long:"periodsize" default:"60,720,1440" description:"comma separated list of ints, specifies descrete states per period"`
+	PeriodChangeRatio float64 `long:"periodchangeratio" default:"0.2" description:"accepted ratio [0,1] for changes, alert if above"`
+	Inputfile         string
 }
 
 var profiler spec.TSProfiler
@@ -70,7 +71,7 @@ func initializeFlags() {
 }
 
 func initProfiler() {
-	profiler = impl.NewProfiler(spec.Settings{
+	profiler = profiler.NewProfiler(spec.Settings{
 		Name:          "csv2tsprofile",
 		BufferSize:    options.BufferSize,
 		States:        options.States,

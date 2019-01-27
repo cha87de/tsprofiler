@@ -1,21 +1,8 @@
-package spec
+package models
 
 import (
 	"time"
 )
-
-// TSProfiler defines the profilers interface to transfer time series data into
-// a statistical profile
-type TSProfiler interface {
-	// Put allows applications to provide a new TSData input to the profiler
-	Put(data TSData)
-
-	// Get generates an returns a profile based on previously put data
-	Get() TSProfile
-
-	// Terminate stops and removes the profiler
-	Terminate()
-}
 
 // Settings defines settings for TSProfiler
 type Settings struct {
