@@ -9,7 +9,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cha87de/tsprofiler/spec"
+	"github.com/cha87de/tsprofiler/api"
+	"github.com/cha87de/tsprofiler/models"
+	"github.com/cha87de/tsprofiler/profiler"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -26,7 +28,7 @@ var options struct {
 	Inputfile         string
 }
 
-var profiler spec.TSProfiler
+var tsprofiler api.TSProfiler
 
 func main() {
 	initializeFlags()
@@ -71,7 +73,7 @@ func initializeFlags() {
 }
 
 func initProfiler() {
-	profiler = profiler.NewProfiler(spec.Settings{
+	tsprofiler = profiler.NewProfiler(models.Settings{
 		Name:          "csv2tsprofile",
 		BufferSize:    options.BufferSize,
 		States:        options.States,
@@ -112,23 +114,23 @@ func readFile(filename string) {
 }
 
 func putMeasurement(utilValue []float64) {
-	metrics := make([]spec.TSDataMetric, 0)
+	metrics := make([]models.TSInputMetric, 0)
 	for i, value := range utilValue {
-		metrics = append(metrics, spec.TSDataMetric{
+		metrics = append(metrics, models.TSInputMetric{
 			Name:     fmt.Sprintf("metric_%d", i),
 			Value:    value,
 			FixedMin: options.FixedMin,
 			FixedMax: options.FixedMax,
 		})
 	}
-	tsdata := spec.TSData{
+	tsinput := models.TSInput{
 		Metrics: metrics,
 	}
-	profiler.Put(tsdata)
+	tsprofiler.Put(tsinput)
 }
 
 func profileOutput() {
-	profile := profiler.Get()
+	profile := tsprofiler.Get()
 	json, err := json.Marshal(profile)
 	if err != nil {
 		fmt.Printf("cannot create json: %s (original: %+v)\n", err, profile)

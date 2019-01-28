@@ -18,21 +18,25 @@ func NewProfiler(settings models.Settings) *Profiler {
 
 // Profiler is the TSProfiler implementation of spec.TSProfiler
 type Profiler struct {
-	input       chan models.TSInput
-	settings    models.Settings
+	input    chan models.TSInput
+	settings models.Settings
+	stopped  bool
+
+	// sub components
 	buffer      buffer.Buffer
 	discretizer discretizer.Discretizer
 	counter     counter.Counter
-	stopped     bool
 }
 
 func (profiler *Profiler) initialize(settings models.Settings) {
 	profiler.input = make(chan models.TSInput, 0)
 	profiler.settings = settings
-	profiler.buffer = buffer.NewBuffer()
+	profiler.stopped = false
+
+	// initialize sub components
+	profiler.buffer = buffer.NewBuffer(settings.FilterStdDevs, profiler)
 	profiler.discretizer = discretizer.NewDiscretizer(settings.States)
 	profiler.counter = counter.NewCounter()
-	profiler.stopped = false
 
 	// start input & output background routines
 	go profiler.outputRunner()
@@ -47,6 +51,10 @@ func (profiler *Profiler) Put(data models.TSInput) {
 // Get generates an returns a profile based on previously put data
 func (profiler *Profiler) Get() models.TSProfile {
 	return profiler.generateProfile()
+}
+
+func (profiler *Profiler) GetCurrentState() []models.TSState {
+	return BULLSHIT
 }
 
 // Terminate stops and removes the profiler
@@ -86,5 +94,27 @@ func (profiler *Profiler) outputRunner() {
 		profiler.settings.OutputCallback(profile)
 		nextRun := start.Add(profiler.settings.OutputFreq)
 		time.Sleep(nextRun.Sub(time.Now()))
+	}
+}
+
+// generateProfile collects the necessary data to return a TSProfile
+func (profiler *profiler) generateProfile() models.TSProfile {
+	var metrics []models.TSProfileMetric
+	profiler.metricsAccess.Lock()
+	defer profiler.metricsAccess.Unlock()
+	for _, metricProfiler := range profiler.metrics {
+		maxCount := float64(metricProfiler.counts.stats.Count) / float64(profiler.settings.BufferSize)
+		txmatrix := computeProbabilities(metricProfiler.counts.stateChangeCounter, maxCount)
+		// fmt.Printf("counter %+v, probs: %+v\n", metricProfiler.counts.stateChangeCounter, txmatrix)
+		metrics = append(metrics, models.TSProfileMetric{
+			Name:     metricProfiler.name,
+			TXMatrix: txmatrix,
+			Stats:    metricProfiler.counts.stats,
+		})
+	}
+	return models.TSProfile{
+		Name:     profiler.settings.Name,
+		Metrics:  metrics,
+		Settings: profiler.settings,
 	}
 }

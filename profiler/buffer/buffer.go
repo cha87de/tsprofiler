@@ -3,13 +3,15 @@ package buffer
 import (
 	"sync"
 
+	"github.com/cha87de/tsprofiler/api"
 	"github.com/cha87de/tsprofiler/models"
 	"github.com/cha87de/tsprofiler/utils"
 )
 
 // NewBuffer initializes and returns a new Buffer
-func NewBuffer(filterStdDevs int) Buffer {
+func NewBuffer(filterStdDevs int, profiler api.TSProfiler) Buffer {
 	return Buffer{
+		profiler:      profiler,
 		items:         make([]models.TSBuffer, 0),
 		metricIndex:   make(map[string]int),
 		access:        &sync.Mutex{},
@@ -19,6 +21,8 @@ func NewBuffer(filterStdDevs int) Buffer {
 
 // Buffer manages access and holds TSBuffer items to buffer TSInput data
 type Buffer struct {
+	// upper level profiler
+	profiler api.TSProfiler
 	// cache
 	items       []models.TSBuffer
 	metricIndex map[string]int
@@ -29,6 +33,8 @@ type Buffer struct {
 
 // Add adds the given tsdata item to its metric buffer
 func (buffer *Buffer) Add(data models.TSInput) {
+	currentStates := buffer.profiler.GetCurrentState()
+
 	// for each metric ...
 	for _, input := range data.Metrics {
 		buffer.access.Lock()
@@ -42,7 +48,17 @@ func (buffer *Buffer) Add(data models.TSInput) {
 		}
 
 		// OUTLIER CHECK?
-		utils.IsOutlier(input.Value, currentAvg, currentStddev, buffer.filterStdDevs)
+		var currentState models.TSState
+		currentStateFound := false
+		for _, n := range currentStates {
+			if n.Metric == metric {
+				currentState = n
+				currentStateFound = true
+			}
+		}
+		if currentStateFound {
+			utils.IsOutlier(input.Value, currentState.Statistics.Avg, currentState.Statistics.Stddev, buffer.filterStdDevs)
+		}
 
 		// add to the metric buffer
 		buffer.items[index].Append(input.Value)
