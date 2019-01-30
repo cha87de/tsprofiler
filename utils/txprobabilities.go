@@ -4,7 +4,7 @@ import (
 	"github.com/cha87de/tsprofiler/models"
 )
 
-func computeProbabilities(statematrix map[string][]int64, maxCount float64) map[string]models.TXStep {
+func ComputeProbabilities(statematrix map[string][]int64, maxCount float64) map[string]models.TXStep {
 	var output map[string]models.TXStep
 	output = make(map[string]models.TXStep)
 	for key, row := range statematrix {

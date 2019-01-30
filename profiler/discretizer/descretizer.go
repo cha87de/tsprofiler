@@ -9,10 +9,11 @@ import (
 )
 
 // NewDiscretizer creates a new instance of Discretizer
-func NewDiscretizer(states int, profiler api.TSProfiler) Discretizer {
+func NewDiscretizer(states int, fixedBound bool, profiler api.TSProfiler) Discretizer {
 	return Discretizer{
-		states:   states,
-		profiler: profiler,
+		profiler:   profiler,
+		states:     states,
+		fixedBound: fixedBound,
 	}
 }
 
@@ -20,8 +21,12 @@ func NewDiscretizer(states int, profiler api.TSProfiler) Discretizer {
 type Discretizer struct {
 	// upper level profiler
 	profiler api.TSProfiler
+
 	// configs
-	states int
+	states     int
+	fixedBound bool
+
+	// no state or cache required
 }
 
 // Discretize performs the computation of a discrete state from a TSBuffer
@@ -31,26 +36,24 @@ func (discretizer *Discretizer) Discretize(buffers []models.TSBuffer) []models.T
 	// for each metric ...
 	for i, buffer := range buffers {
 		// find matching currentState
-		var currentState models.TSState
-		currentStateFound := false
-		for _, n := range currentStates {
-			if n.Metric == buffer.Metric {
-				currentState = n
-				currentStateFound = true
-			}
-		}
+		currentState, currentStateFound := currentStates[buffer.Metric]
 		var currentAvg float64
 		if currentStateFound {
-			currentAvg = currentState.Statistics.Avg
+			currentAvg = currentState.Avg
 		}
 
+		// compute basic statistics
 		stats := discretizer.computeStats(buffer, currentAvg)
+
+		// compute state from basic statistics
 		state := utils.Discretize(stats.Avg, discretizer.states, stats.Min, stats.Max)
 		if state.Value < 0 || state.Value >= int64(discretizer.states) {
 			fmt.Printf("no valid state found (i) for value %v\n", stats.Avg)
 			// no state found
 			continue
 		}
+
+		// bundle TSState
 		states[i] = models.TSState{
 			Metric:     buffer.Metric,
 			State:      state,
@@ -64,8 +67,12 @@ func (discretizer *Discretizer) computeStats(buffer models.TSBuffer, currentAvg 
 	stats := models.TSStats{}
 	stats.Avg = utils.Avg(buffer.RawData)
 	stats.Count = int64(len(buffer.RawData))
-	stats.Max = buffer.Max
 	stats.Min = buffer.Min
+	stats.Max = buffer.Max
+	if discretizer.fixedBound {
+		stats.Min = buffer.FixedMin
+		stats.Max = buffer.FixedMax
+	}
 	stats.Stddev = utils.Stddev(buffer.RawData)
 	stddevSum := float64(0)
 	for _, v := range buffer.RawData {

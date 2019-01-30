@@ -3,6 +3,8 @@ package buffer
 import (
 	"sync"
 
+	"github.com/jinzhu/copier"
+
 	"github.com/cha87de/tsprofiler/api"
 	"github.com/cha87de/tsprofiler/models"
 	"github.com/cha87de/tsprofiler/utils"
@@ -23,10 +25,12 @@ func NewBuffer(filterStdDevs int, profiler api.TSProfiler) Buffer {
 type Buffer struct {
 	// upper level profiler
 	profiler api.TSProfiler
+
 	// cache
 	items       []models.TSBuffer
 	metricIndex map[string]int
 	access      *sync.Mutex
+
 	// configs
 	filterStdDevs int
 }
@@ -48,22 +52,16 @@ func (buffer *Buffer) Add(data models.TSInput) {
 		}
 
 		// OUTLIER CHECK?
-		var currentState models.TSState
-		currentStateFound := false
-		for _, n := range currentStates {
-			if n.Metric == metric {
-				currentState = n
-				currentStateFound = true
-			}
-		}
+		currentState, currentStateFound := currentStates[metric]
 		if currentStateFound {
-			utils.IsOutlier(input.Value, currentState.Statistics.Avg, currentState.Statistics.Stddev, buffer.filterStdDevs)
+			utils.IsOutlier(input.Value, currentState.Avg, currentState.Stddev, buffer.filterStdDevs)
 		}
 
 		// add to the metric buffer
 		buffer.items[index].Append(input.Value)
 		buffer.items[index].FixedMin = input.FixedMin
 		buffer.items[index].FixedMax = input.FixedMax
+
 		buffer.access.Unlock()
 	}
 }
@@ -74,7 +72,7 @@ func (buffer *Buffer) Reset() []models.TSBuffer {
 	buffer.access.Lock()
 
 	// make a copy
-	copy(buffers, buffer.items)
+	copier.Copy(&buffers, &buffer.items)
 
 	// clear the buffer
 	buffer.items = make([]models.TSBuffer, 0)

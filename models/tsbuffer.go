@@ -11,8 +11,9 @@ func NewTSBuffer(metric string) TSBuffer {
 
 // TSBuffer describes one full buffer
 type TSBuffer struct {
-	Metric   string
-	RawData  []float64
+	Metric  string
+	RawData []float64
+
 	Min      float64
 	Max      float64
 	FixedMin float64

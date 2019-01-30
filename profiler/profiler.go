@@ -11,7 +11,7 @@ import (
 
 // NewProfiler creates and returns a new TSProfiler, configured with given Settings
 func NewProfiler(settings models.Settings) *Profiler {
-	profiler := profiler{}
+	profiler := Profiler{}
 	profiler.initialize(settings)
 	return &profiler
 }
@@ -35,8 +35,8 @@ func (profiler *Profiler) initialize(settings models.Settings) {
 
 	// initialize sub components
 	profiler.buffer = buffer.NewBuffer(settings.FilterStdDevs, profiler)
-	profiler.discretizer = discretizer.NewDiscretizer(settings.States)
-	profiler.counter = counter.NewCounter()
+	profiler.discretizer = discretizer.NewDiscretizer(settings.States, settings.FixBound, profiler)
+	profiler.counter = counter.NewCounter(settings.History, settings.States, settings.BufferSize, profiler)
 
 	// start input & output background routines
 	go profiler.outputRunner()
@@ -53,8 +53,9 @@ func (profiler *Profiler) Get() models.TSProfile {
 	return profiler.generateProfile()
 }
 
-func (profiler *Profiler) GetCurrentState() []models.TSState {
-	return BULLSHIT
+// GetCurrentState returns the current state for each metric
+func (profiler *Profiler) GetCurrentState() map[string]models.TSStats {
+	return profiler.counter.GetStats()
 }
 
 // Terminate stops and removes the profiler
@@ -72,11 +73,11 @@ func (profiler *Profiler) inputListener() {
 		profiler.buffer.Add(input)
 		itemCount++
 
-		if itemCount > profiler.settings.BufferSize {
+		if itemCount >= profiler.settings.BufferSize {
 			// buffer is full, trigger discretizer!
 			tsbuffers := profiler.buffer.Reset()
 			tsstates := profiler.discretizer.Discretize(tsbuffers)
-			profiler.counters.Count(tsstates)
+			profiler.counter.Count(tsstates)
 			itemCount = 0
 		}
 	}
@@ -98,20 +99,8 @@ func (profiler *Profiler) outputRunner() {
 }
 
 // generateProfile collects the necessary data to return a TSProfile
-func (profiler *profiler) generateProfile() models.TSProfile {
-	var metrics []models.TSProfileMetric
-	profiler.metricsAccess.Lock()
-	defer profiler.metricsAccess.Unlock()
-	for _, metricProfiler := range profiler.metrics {
-		maxCount := float64(metricProfiler.counts.stats.Count) / float64(profiler.settings.BufferSize)
-		txmatrix := computeProbabilities(metricProfiler.counts.stateChangeCounter, maxCount)
-		// fmt.Printf("counter %+v, probs: %+v\n", metricProfiler.counts.stateChangeCounter, txmatrix)
-		metrics = append(metrics, models.TSProfileMetric{
-			Name:     metricProfiler.name,
-			TXMatrix: txmatrix,
-			Stats:    metricProfiler.counts.stats,
-		})
-	}
+func (profiler *Profiler) generateProfile() models.TSProfile {
+	metrics := profiler.counter.GetTx()
 	return models.TSProfile{
 		Name:     profiler.settings.Name,
 		Metrics:  metrics,

@@ -13,7 +13,7 @@ type TSProfiler interface {
 	// Get generates an returns a profile based on previously put data
 	Get() models.TSProfile
 
-	GetCurrentState() []models.TSState
+	GetCurrentState() map[string]models.TSStats
 
 	// Terminate stops and removes the profiler
 	Terminate()
