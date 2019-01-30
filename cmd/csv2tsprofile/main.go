@@ -9,23 +9,26 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cha87de/tsprofiler/impl"
-	"github.com/cha87de/tsprofiler/spec"
+	"github.com/cha87de/tsprofiler/api"
+	"github.com/cha87de/tsprofiler/models"
+	"github.com/cha87de/tsprofiler/profiler"
 	flags "github.com/jessevdk/go-flags"
 )
 
 var options struct {
-	States        int     `long:"states" default:"4"`
-	BufferSize    int     `long:"buffersize" default:"10"`
-	History       int     `long:"history" default:"1"`
-	FilterStdDevs int     `long:"filterstddevs" default:"2"`
-	FixedBound    bool    `long:"fixedbound"`
-	FixedMin      float64 `long:"fixedmin" default:"0"`
-	FixedMax      float64 `long:"fixedmax" default:"100"`
-	Inputfile     string
+	States            int     `long:"states" default:"4"`
+	BufferSize        int     `long:"buffersize" default:"10"`
+	History           int     `long:"history" default:"1"`
+	FilterStdDevs     int     `long:"filterstddevs" default:"2"`
+	FixedBound        bool    `long:"fixedbound"`
+	FixedMin          float64 `long:"fixedmin" default:"0" description:"if fixedbound is set, set the min value"`
+	FixedMax          float64 `long:"fixedmax" default:"100" description:"if fixedbound is set, set the max value"`
+	PeriodSize        string  `long:"periodsize" default:"60,720,1440" description:"comma separated list of ints, specifies descrete states per period"`
+	PeriodChangeRatio float64 `long:"periodchangeratio" default:"0.2" description:"accepted ratio [0,1] for changes, alert if above"`
+	Inputfile         string
 }
 
-var profiler spec.TSProfiler
+var tsprofiler api.TSProfiler
 
 func main() {
 	initializeFlags()
@@ -70,7 +73,7 @@ func initializeFlags() {
 }
 
 func initProfiler() {
-	profiler = impl.NewProfiler(spec.Settings{
+	tsprofiler = profiler.NewProfiler(models.Settings{
 		Name:          "csv2tsprofile",
 		BufferSize:    options.BufferSize,
 		States:        options.States,
@@ -111,23 +114,23 @@ func readFile(filename string) {
 }
 
 func putMeasurement(utilValue []float64) {
-	metrics := make([]spec.TSDataMetric, 0)
+	metrics := make([]models.TSInputMetric, 0)
 	for i, value := range utilValue {
-		metrics = append(metrics, spec.TSDataMetric{
+		metrics = append(metrics, models.TSInputMetric{
 			Name:     fmt.Sprintf("metric_%d", i),
 			Value:    value,
 			FixedMin: options.FixedMin,
 			FixedMax: options.FixedMax,
 		})
 	}
-	tsdata := spec.TSData{
+	tsinput := models.TSInput{
 		Metrics: metrics,
 	}
-	profiler.Put(tsdata)
+	tsprofiler.Put(tsinput)
 }
 
 func profileOutput() {
-	profile := profiler.Get()
+	profile := tsprofiler.Get()
 	json, err := json.Marshal(profile)
 	if err != nil {
 		fmt.Printf("cannot create json: %s (original: %+v)\n", err, profile)
