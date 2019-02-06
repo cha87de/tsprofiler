@@ -30,7 +30,7 @@ recurrent Markov transition matrices.
 
 ### Command line tool **csv2tsprofile**
 
-The TSProfiler comes with a command line tool to read a CSV file and generate a TSProfile. [Get the most recent stable build from Releases.](https://github.com/cha87de/tsprofiler/releases).
+The TSProfiler comes with a command line tool to read a CSV file and generate a TSProfile. [Get the most recent stable build from Releases.](https://github.com/cha87de/tsprofiler/releases)
 
 Usage:
 

@@ -121,19 +121,19 @@ func (counter *Counter) count(tsstate models.TSState) {
 }
 
 // GetTx returns the probability matrix for each metric
-func (counter *Counter) GetTx() []models.TSProfileMetric {
+func (counter *Counter) GetTx() []models.TxMatrix {
 	counter.access.Lock()
 	defer counter.access.Unlock()
-	var metrics []models.TSProfileMetric
+	var metrics []models.TxMatrix
 	for metric, stateChangeCounter := range counter.stateChangeCounters {
 		stats := counter.stats[metric]
 		maxCount := float64(stats.Count) / float64(counter.buffersize) // count only discrete states (stats.Count counts TSInput measurements)
-		txmatrix := utils.ComputeProbabilities(stateChangeCounter, maxCount)
+		transitions := utils.ComputeProbabilities(stateChangeCounter, maxCount)
 		// fmt.Printf("counter %+v, probs: %+v\n", metricProfiler.counts.stateChangeCounter, txmatrix)
-		metrics = append(metrics, models.TSProfileMetric{
-			Name:     metric,
-			TXMatrix: txmatrix,
-			Stats:    stats,
+		metrics = append(metrics, models.TxMatrix{
+			Metric:      metric,
+			Transitions: transitions,
+			Stats:       stats,
 		})
 	}
 	return metrics

@@ -14,15 +14,15 @@ func NewPeriodTreeNode(size []int) PeriodTreeNode {
 	return PeriodTreeNode{
 		MaxChilds: maxChilds,
 		Children:  children,
-		TxMatrix:  make([]TSProfileMetric, 0),
+		TxMatrix:  make([]TxMatrix, 0),
 	}
 }
 
 // PeriodTreeNode describes a node holding a TxMatrix and (if not leaf node) children
 type PeriodTreeNode struct {
-	MaxChilds int               `json:"maxChilds"`
-	Children  []PeriodTreeNode  `json:"children"`
-	TxMatrix  []TSProfileMetric `json:"txmatrix"`
+	MaxChilds int              `json:"maxChilds"`
+	Children  []PeriodTreeNode `json:"children"`
+	TxMatrix  []TxMatrix       `json:"txmatrix"`
 }
 
 // GetNode returns the TreeNode which is located at `path`
