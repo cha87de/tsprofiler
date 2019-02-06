@@ -1,6 +1,6 @@
 package models
 
-import "github.com/cha87de/tsprofiler/utils"
+import "math"
 
 // TxMatrix describes for one metric a statistical profile
 type TxMatrix struct {
@@ -36,5 +36,13 @@ func (txMatrix *TxMatrix) Diff(txMatrixRemote TxMatrix) float64 {
 		}
 	}
 	ratio := float64(1) - float64(diffs)/float64(counter)
-	return utils.Round(ratio*1000) / 1000 // only 4 decimals please
+	return round(ratio*1000) / 1000 // only 4 decimals please
+}
+
+func round(x float64) float64 {
+	t := math.Trunc(x)
+	if math.Abs(x-t) >= 0.5 {
+		return t + math.Copysign(1, x)
+	}
+	return t
 }
