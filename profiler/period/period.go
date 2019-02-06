@@ -88,8 +88,20 @@ func (period *Period) Count(tsstates []models.TSState) {
 			treePos := x[:len(period.txTreePosition)-i]
 			node := period.txTree.GetNode(treePos)
 
-			node.TxMatrix = tx // for now simply overwrite
-			// TODO merge / alert TxMatrix with tx
+			// alert or merge, depending on diff
+			if len(node.TxMatrix) != len(tx) {
+				node.TxMatrix = tx
+			}
+			for m := range tx {
+				localDiff := node.TxMatrix[m].Diff(tx[m])
+				fmt.Printf("localDiff is %.4f\n", localDiff)
+				if localDiff < 0.1 {
+					node.TxMatrix[m] = tx[m] // for now simply overwrite
+					// TODO MERGE INSTEAD OF overwrite
+				} else {
+					fmt.Printf("ALERT: localDiff is %.4f\n", localDiff)
+				}
+			}
 
 			// update tree position pointer
 			period.txTreePosition[i] = period.txTreePosition[i] + 1
