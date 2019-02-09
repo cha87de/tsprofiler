@@ -1,6 +1,8 @@
 package models
 
-import "math"
+import (
+	"math"
+)
 
 // TxMatrix describes for one metric a statistical profile
 type TxMatrix struct {
@@ -37,6 +39,22 @@ func (txMatrix *TxMatrix) Diff(txMatrixRemote TxMatrix) float64 {
 	}
 	ratio := float64(1) - float64(diffs)/float64(counter)
 	return round(ratio*1000) / 1000 // only 4 decimals please
+}
+
+// Merge merges the given TxMatrix to the current one by multiplying the probabilities
+func (txMatrix *TxMatrix) Merge(txMatrixRemote TxMatrix) {
+	for state, txStep := range txMatrix.Transitions {
+		remoteTxStep, ok := txMatrixRemote.Transitions[state]
+		for i, nextStateProb := range txStep.NextStateProbs {
+			if ok && len(remoteTxStep.NextStateProbs) > i {
+				x := float64(nextStateProb)
+				y := float64(remoteTxStep.NextStateProbs[i])
+				z := int(round((x + y) / 2))
+				// fmt.Printf("%f and %f = %d\n", x, y, z)
+				txMatrix.Transitions[state].NextStateProbs[i] = z
+			}
+		}
+	}
 }
 
 func round(x float64) float64 {
