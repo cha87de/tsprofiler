@@ -106,6 +106,7 @@ func (counter *Counter) count(tsstate models.TSState) {
 		// increase (and create if not exists) counter for previousStateIdent
 		_, ok := counter.stateChangeCounters[metric][previousStateIdent]
 		if !ok {
+			counter.stateChangeCounters[metric] = make(map[string][]int64)
 			counter.stateChangeCounters[metric][previousStateIdent] = make([]int64, counter.states)
 		}
 		counter.stateChangeCounters[metric][previousStateIdent][tsstate.State.Value]++
