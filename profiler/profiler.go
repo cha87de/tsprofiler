@@ -5,8 +5,8 @@ import (
 
 	"github.com/cha87de/tsprofiler/models"
 	"github.com/cha87de/tsprofiler/profiler/buffer"
-	"github.com/cha87de/tsprofiler/profiler/counter"
 	"github.com/cha87de/tsprofiler/profiler/discretizer"
+	"github.com/cha87de/tsprofiler/profiler/period"
 )
 
 // NewProfiler creates and returns a new TSProfiler, configured with given Settings
@@ -25,7 +25,7 @@ type Profiler struct {
 	// sub components
 	buffer      buffer.Buffer
 	discretizer discretizer.Discretizer
-	counter     counter.Counter
+	period      period.Period
 }
 
 func (profiler *Profiler) initialize(settings models.Settings) {
@@ -36,7 +36,7 @@ func (profiler *Profiler) initialize(settings models.Settings) {
 	// initialize sub components
 	profiler.buffer = buffer.NewBuffer(settings.FilterStdDevs, profiler)
 	profiler.discretizer = discretizer.NewDiscretizer(settings.States, settings.FixBound, profiler)
-	profiler.counter = counter.NewCounter(settings.History, settings.States, settings.BufferSize, profiler)
+	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, profiler)
 
 	// start input & output background routines
 	go profiler.outputRunner()
@@ -55,7 +55,7 @@ func (profiler *Profiler) Get() models.TSProfile {
 
 // GetCurrentState returns the current state for each metric
 func (profiler *Profiler) GetCurrentState() map[string]models.TSStats {
-	return profiler.counter.GetStats()
+	return profiler.period.GetStats()
 }
 
 // Terminate stops and removes the profiler
@@ -77,7 +77,7 @@ func (profiler *Profiler) inputListener() {
 			// buffer is full, trigger discretizer!
 			tsbuffers := profiler.buffer.Reset()
 			tsstates := profiler.discretizer.Discretize(tsbuffers)
-			profiler.counter.Count(tsstates)
+			profiler.period.Count(tsstates)
 			itemCount = 0
 		}
 	}
@@ -100,10 +100,10 @@ func (profiler *Profiler) outputRunner() {
 
 // generateProfile collects the necessary data to return a TSProfile
 func (profiler *Profiler) generateProfile() models.TSProfile {
-	metrics := profiler.counter.GetTx()
+	periodTree := profiler.period.GetTx()
 	return models.TSProfile{
-		Name:     profiler.settings.Name,
-		Metrics:  metrics,
-		Settings: profiler.settings,
+		Name:       profiler.settings.Name,
+		PeriodTree: periodTree,
+		Settings:   profiler.settings,
 	}
 }

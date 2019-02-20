@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/cha87de/tsprofiler/api"
 	"github.com/cha87de/tsprofiler/models"
@@ -73,6 +74,14 @@ func initializeFlags() {
 }
 
 func initProfiler() {
+	// convert periodSize string array to int array
+	periodSizeStr := strings.Split(options.PeriodSize, ",")
+	periodSize := make([]int, len(periodSizeStr))
+	for i, s := range periodSizeStr {
+		periodSize[i], _ = strconv.Atoi(s)
+	}
+
+	// create new profiler
 	tsprofiler = profiler.NewProfiler(models.Settings{
 		Name:          "csv2tsprofile",
 		BufferSize:    options.BufferSize,
@@ -80,6 +89,7 @@ func initProfiler() {
 		FilterStdDevs: options.FilterStdDevs,
 		History:       options.History,
 		FixBound:      options.FixedBound,
+		PeriodSize:    periodSize,
 	})
 }
 

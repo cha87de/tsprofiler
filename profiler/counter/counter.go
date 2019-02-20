@@ -121,25 +121,25 @@ func (counter *Counter) count(tsstate models.TSState) {
 }
 
 // GetTx returns the probability matrix for each metric
-func (counter *Counter) GetTx() []models.TSProfileMetric {
+func (counter *Counter) GetTx() []models.TxMatrix {
 	counter.access.Lock()
 	defer counter.access.Unlock()
-	var metrics []models.TSProfileMetric
+	var metrics []models.TxMatrix
 	for metric, stateChangeCounter := range counter.stateChangeCounters {
-
 		stats := counter.stats[metric]
-		maxCount := float64(stats.Count) / float64(counter.buffersize) // WHY / BUFFERSIZE??
-		txmatrix := utils.ComputeProbabilities(stateChangeCounter, maxCount)
+		maxCount := float64(stats.Count) / float64(counter.buffersize) // count only discrete states (stats.Count counts TSInput measurements)
+		transitions := utils.ComputeProbabilities(stateChangeCounter, maxCount)
 		// fmt.Printf("counter %+v, probs: %+v\n", metricProfiler.counts.stateChangeCounter, txmatrix)
-		metrics = append(metrics, models.TSProfileMetric{
-			Name:     metric,
-			TXMatrix: txmatrix,
-			Stats:    stats,
+		metrics = append(metrics, models.TxMatrix{
+			Metric:      metric,
+			Transitions: transitions,
+			Stats:       stats,
 		})
 	}
 	return metrics
 }
 
+// GetStats returns the counter's current statistics as TSStats per metric
 func (counter *Counter) GetStats() map[string]models.TSStats {
 	counter.access.Lock()
 	defer counter.access.Unlock()
@@ -150,6 +150,7 @@ func (counter *Counter) GetStats() map[string]models.TSStats {
 func (counter *Counter) Reset() {
 	counter.access.Lock()
 	defer counter.access.Unlock()
-	//counter.currentState = make(map[string][]models.State)
-	//counter.stateChangeCounter = make(map[string]map[string][]int64)
+	counter.currentState = make(map[string][]models.State)
+	counter.stateChangeCounters = make(map[string]map[string][]int64)
+	counter.stats = make(map[string]models.TSStats)
 }

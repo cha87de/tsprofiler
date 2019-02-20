@@ -29,4 +29,7 @@ type Settings struct {
 
 	// OutputCallback defines the callback function for `TSProfile`s every `OutputFreq`
 	OutputCallback func(data TSProfile) `json:"-"`
+
+	// PeriodSize defines the amount and size of periods
+	PeriodSize []int `json:"periodsize"`
 }
