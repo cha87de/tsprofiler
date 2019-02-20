@@ -1,7 +1,6 @@
 package period
 
 import (
-	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -33,9 +32,6 @@ func NewPeriod(history int, states int, buffersize int, periodSize []int, profil
 		period.periodSizeCounter[i] = 0
 		period.txTreePosition[i] = 0
 	}
-
-	json, _ := json.Marshal(period.txTree)
-	fmt.Printf("%s\n\n", json)
 
 	return period
 }

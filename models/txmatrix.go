@@ -41,7 +41,7 @@ func (txMatrix *TxMatrix) Diff(txMatrixRemote TxMatrix) float64 {
 	return round(ratio*1000) / 1000 // only 4 decimals please
 }
 
-// Merge merges the given TxMatrix to the current one by multiplying the probabilities
+// Merge merges the given TxMatrix to the current one via average on the probabilities
 func (txMatrix *TxMatrix) Merge(txMatrixRemote TxMatrix) {
 	for state, txStep := range txMatrix.Transitions {
 		remoteTxStep, ok := txMatrixRemote.Transitions[state]
