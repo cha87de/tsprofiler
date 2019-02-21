@@ -1,7 +1,6 @@
 package period
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/cha87de/tsprofiler/api"
@@ -89,9 +88,9 @@ func (period *Period) Count(tsstates []models.TSState) {
 				node.TxMatrix = tx
 			}
 			for m := range tx {
-				localDiff := node.TxMatrix[m].Diff(tx[m])
+				// localDiff := node.TxMatrix[m].Diff(tx[m])
 				// 1.0 means equal, 0.0 means not equal
-				fmt.Printf("localDiff is %.4f\n", localDiff)
+				// fmt.Printf("localDiff is %.4f\n", localDiff)
 				// if localDiff > float64(0.8) {
 				node.TxMatrix[m].Merge(tx[m])
 				// fmt.Printf("%+v", node.TxMatrix[m].Transitions)
