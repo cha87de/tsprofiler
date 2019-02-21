@@ -2,6 +2,7 @@ package discretizer
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cha87de/tsprofiler/api"
 	"github.com/cha87de/tsprofiler/models"
@@ -48,7 +49,7 @@ func (discretizer *Discretizer) Discretize(buffers []models.TSBuffer) []models.T
 		// compute state from basic statistics
 		state := utils.Discretize(stats.Avg, discretizer.states, stats.Min, stats.Max)
 		if state.Value < 0 || state.Value >= int64(discretizer.states) {
-			fmt.Printf("no valid state found (i) for value %v\n", stats.Avg)
+			fmt.Fprintf(os.Stderr, "no valid state found (i) for value %v\n", stats.Avg)
 			// no state found
 			continue
 		}
