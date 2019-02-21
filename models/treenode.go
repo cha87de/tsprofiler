@@ -2,15 +2,17 @@ package models
 
 // NewPeriodTreeNode instantiates and returns a PeriodTreeNode with `size` children (recursively)
 func NewPeriodTreeNode(size []int) PeriodTreeNode {
-	maxChilds := size[0]
+	maxChilds := 0
 	children := make([]PeriodTreeNode, 0)
-	if len(size) > 1 {
-		// build children
-		for i := 0; i < maxChilds; i++ {
-			children = append(children, NewPeriodTreeNode(size[1:]))
+	if len(size) > 0 {
+		maxChilds = size[0]
+		if len(size) > 1 {
+			// build children
+			for i := 0; i < maxChilds; i++ {
+				children = append(children, NewPeriodTreeNode(size[1:]))
+			}
 		}
 	}
-
 	return PeriodTreeNode{
 		MaxChilds: maxChilds,
 		Children:  children,

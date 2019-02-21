@@ -24,7 +24,7 @@ var options struct {
 	FixedBound        bool    `long:"fixedbound"`
 	FixedMin          float64 `long:"fixedmin" default:"0" description:"if fixedbound is set, set the min value"`
 	FixedMax          float64 `long:"fixedmax" default:"100" description:"if fixedbound is set, set the max value"`
-	PeriodSize        string  `long:"periodsize" default:"60,720,1440" description:"comma separated list of ints, specifies descrete states per period"`
+	PeriodSize        string  `long:"periodsize" default:"" description:"comma separated list of ints, specifies descrete states per period"`
 	PeriodChangeRatio float64 `long:"periodchangeratio" default:"0.2" description:"accepted ratio [0,1] for changes, alert if above"`
 	Inputfile         string
 }
@@ -76,9 +76,13 @@ func initializeFlags() {
 func initProfiler() {
 	// convert periodSize string array to int array
 	periodSizeStr := strings.Split(options.PeriodSize, ",")
-	periodSize := make([]int, len(periodSizeStr))
-	for i, s := range periodSizeStr {
-		periodSize[i], _ = strconv.Atoi(s)
+	periodSize := make([]int, 0)
+	for _, s := range periodSizeStr {
+		if s == "" {
+			continue
+		}
+		si, _ := strconv.Atoi(s)
+		periodSize = append(periodSize, si)
 	}
 
 	// create new profiler
