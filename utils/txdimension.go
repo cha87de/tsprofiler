@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -40,7 +41,7 @@ func ChangeDimension(sourceMatrix map[string][]int64, oldStats models.TSStats, n
 					valueIpart += oldMin
 					newStateIpart := Discretize(valueIpart, states, newMin, newMax)
 					if newStateIpart.Value < 0 || newStateIpart.Value >= int64(states) {
-						fmt.Printf("no valid state found (iI). %.0f + %.0f * %s = %.0f (min %v, max %v, oldmin %v, oldmax %v)\n", oldMin, oldStateStepSize, key, valueIpart, newMin, newMax, oldMin, oldMax)
+						fmt.Fprintf(os.Stderr, "no valid state found (iI). %.0f + %.0f * %s = %.0f (min %v, max %v, oldmin %v, oldmax %v)\n", oldMin, oldStateStepSize, key, valueIpart, newMin, newMax, oldMin, oldMax)
 						// no state found
 						newKey = ""
 						break
@@ -60,7 +61,7 @@ func ChangeDimension(sourceMatrix map[string][]int64, oldStats models.TSStats, n
 			newStateJ := Discretize(valueJ, states, newMin, newMax)
 
 			if newStateJ.Value < 0 || newStateJ.Value >= int64(states) {
-				fmt.Printf("no valid state found (iJ) for value %v (min: %v, max %v, j: %v, stepsize: %v)\n", valueJ, newMin, newMax, j, oldStateStepSize)
+				fmt.Fprintf(os.Stderr, "no valid state found (iJ) for value %v (min: %v, max %v, j: %v, stepsize: %v)\n", valueJ, newMin, newMax, j, oldStateStepSize)
 				// no state found
 				continue
 			}
