@@ -101,9 +101,11 @@ func (profiler *Profiler) outputRunner() {
 // generateProfile collects the necessary data to return a TSProfile
 func (profiler *Profiler) generateProfile() models.TSProfile {
 	periodTree := profiler.period.GetTx()
+	phases := profiler.period.GetPhasesTx()
 	return models.TSProfile{
 		Name:       profiler.settings.Name,
 		PeriodTree: periodTree,
+		Phases:     phases,
 		Settings:   profiler.settings,
 	}
 }

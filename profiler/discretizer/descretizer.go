@@ -47,7 +47,8 @@ func (discretizer *Discretizer) Discretize(buffers []models.TSBuffer) []models.T
 		stats := discretizer.computeStats(buffer, currentAvg)
 
 		// compute state from basic statistics
-		state := utils.Discretize(stats.Avg, discretizer.states, stats.Min, stats.Max)
+		// state := utils.SimpleDiscretize(stats.Avg, discretizer.states, stats.Min, stats.Max)
+		state := utils.ClosestDiscretize(stats.Avg, discretizer.states, stats.Min, stats.Max)
 		if state.Value < 0 || state.Value >= int64(discretizer.states) {
 			fmt.Fprintf(os.Stderr, "no valid state found (i) for value %v\n", stats.Avg)
 			// no state found

@@ -39,7 +39,7 @@ func ChangeDimension(sourceMatrix map[string][]int64, oldStats models.TSStats, n
 					}
 					valueIpart := float64(i) * oldStateStepSize
 					valueIpart += oldMin
-					newStateIpart := Discretize(valueIpart, states, newMin, newMax)
+					newStateIpart := ClosestDiscretize(valueIpart, states, newMin, newMax)
 					if newStateIpart.Value < 0 || newStateIpart.Value >= int64(states) {
 						fmt.Fprintf(os.Stderr, "no valid state found (iI). %.0f + %.0f * %s = %.0f (min %v, max %v, oldmin %v, oldmax %v)\n", oldMin, oldStateStepSize, key, valueIpart, newMin, newMax, oldMin, oldMax)
 						// no state found
@@ -58,7 +58,7 @@ func ChangeDimension(sourceMatrix map[string][]int64, oldStats models.TSStats, n
 			}
 			valueJ := float64(j) * oldStateStepSize
 			valueJ += oldMin
-			newStateJ := Discretize(valueJ, states, newMin, newMax)
+			newStateJ := ClosestDiscretize(valueJ, states, newMin, newMax)
 
 			if newStateJ.Value < 0 || newStateJ.Value >= int64(states) {
 				fmt.Fprintf(os.Stderr, "no valid state found (iJ) for value %v (min: %v, max %v, j: %v, stepsize: %v)\n", valueJ, newMin, newMax, j, oldStateStepSize)

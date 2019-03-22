@@ -2,8 +2,8 @@ package utils
 
 import "github.com/cha87de/tsprofiler/models"
 
-// Discretize returns a state between min and max with maxstate steps of given value
-func Discretize(value float64, maxstate int, min float64, max float64) models.State {
+// SimpleDiscretize returns a state between min and max with maxstate steps of given value finding the smallest state
+func SimpleDiscretize(value float64, maxstate int, min float64, max float64) models.State {
 	stateStepSize := float64(max-min) / float64(maxstate)
 	stateStepValue := min
 	stateValue := int64(-1)
@@ -21,5 +21,22 @@ func Discretize(value float64, maxstate int, min float64, max float64) models.St
 	}
 	return models.State{
 		Value: stateValue,
+	}
+}
+
+// ClosestDiscretize returns a state between min and max with maxstate steps of given value, finding the closest state
+func ClosestDiscretize(value float64, maxstate int, min float64, max float64) models.State {
+	stateStepSize := float64(max-min) / float64(maxstate)
+	for i := 0; i < maxstate; i++ {
+		lowerbound := float64(i)*stateStepSize - 0.5*stateStepSize
+		upperbound := float64(i)*stateStepSize + 0.5*stateStepSize
+		if value >= lowerbound && value < upperbound {
+			return models.State{
+				Value: int64(i),
+			}
+		}
+	}
+	return models.State{
+		Value: int64(0),
 	}
 }

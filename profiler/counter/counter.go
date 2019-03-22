@@ -44,6 +44,54 @@ type Counter struct {
 	buffersize int
 }
 
+// Likeliness returns the probability [0,1] for the state change from historic previous to next TSState
+func (counter *Counter) Likeliness(next []models.TSState) float32 {
+	var count float32
+	var likeliness float32
+
+	// for each metric
+	for _, tsstate := range next {
+		previousMetric, exists := counter.currentState[tsstate.Metric]
+		if !exists {
+			continue
+		}
+		history := utils.HistoryStateAsString(previousMetric)
+		stateCounts := counter.stateChangeCounters[tsstate.Metric][history]
+
+		var stateCountsTotal int64
+		for _, n := range stateCounts {
+			stateCountsTotal += n
+		}
+		nextStateValue := tsstate.State.Value
+		if int64(len(stateCounts)) <= nextStateValue {
+			// next state never seen before!
+			continue
+		}
+
+		stateCountsNext := stateCounts[nextStateValue]
+		prob := float32(stateCountsNext) / float32(stateCountsTotal)
+		likeliness += prob
+		count += 1
+	}
+
+	total := likeliness / count
+	return total
+}
+
+// Totalcounts returns the summed up total amount of counter values
+func (counter *Counter) Totalcounts() int64 {
+	var total int64
+	for _, c := range counter.stats {
+		total += c.Count
+	}
+	return total
+}
+
+// Update sets the new config settings to the counter
+func (counter *Counter) Update(states int) {
+	counter.states = states
+}
+
 // Count takes a discretized Buffer represented as TSStates for each
 // metric and increases the counter
 func (counter *Counter) Count(tsstates []models.TSState) {
