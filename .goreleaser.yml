@@ -6,6 +6,12 @@ builds:
       - linux
     goarch:
       - amd64
+  - main: ./cmd/tspredictor
+    binary: tspredictor
+    goos:
+      - linux
+    goarch:
+      - amd64      
 
 nfpm:
   name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"

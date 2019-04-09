@@ -36,6 +36,7 @@ func NewPeriod(history int, states int, buffersize int, periodSize []int, profil
 		buffersize: buffersize,
 		periodSize: periodSize,
 
+		// TODO MAKE THIS CONFIGURABLE
 		phaseThresholdLikeliness: 0.6,
 		phaseThresholdCounts:     60,
 	}
