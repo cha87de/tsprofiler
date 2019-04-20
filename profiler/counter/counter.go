@@ -110,9 +110,16 @@ func (counter *Counter) count(tsstate models.TSState) {
 	metric := tsstate.Metric
 
 	// handle default statistics
+	if _, exists := counter.stats[metric]; !exists {
+		counter.stats[metric] = models.TSStats{
+			Min: -1,
+			// keep others to default 0
+		}
+	}
+
 	stats := tsstate.Statistics
 	globalStats := counter.stats[metric]
-	if counter.stats[metric].Min > stats.Min || counter.stats[metric].Max < stats.Max {
+	if counter.stats[metric].Min == -1 || counter.stats[metric].Min > stats.Min || counter.stats[metric].Max < stats.Max {
 		// min/max changed? update tx matrix dimension
 		counter.stateChangeCounters[metric] = utils.ChangeDimension(counter.stateChangeCounters[metric], counter.stats[metric], stats, counter.states)
 
