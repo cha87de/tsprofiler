@@ -12,7 +12,8 @@ import (
 )
 
 var options struct {
-	Steps     int `long:"steps" default:"40"`
+	Steps     int                      `long:"steps" default:"40"`
+	Mode      predictor.PredictionMode `long:"mode" default:"0"`
 	Inputfile string
 }
 
@@ -21,6 +22,7 @@ func main() {
 
 	profile := readProfileFromFile(options.Inputfile)
 	predictor := predictor.NewPredictor(profile)
+	predictor.SetMode(options.Mode)
 	/*predictor.SetState(map[string]string{
 		"metric_0": "0",
 	})*/

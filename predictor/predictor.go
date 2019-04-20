@@ -10,8 +10,9 @@ import (
 // NewPredictor returns a new predictor for the given TSProfile
 func NewPredictor(profile models.TSProfile) *Predictor {
 	predictor := Predictor{
-		profile: profile,
-		mode:    PredictionModeRootTx,
+		profile:      profile,
+		mode:         PredictionModeRootTx,
+		currentPhase: 0,
 	}
 	predictor.initializeState()
 	return &predictor
@@ -21,6 +22,7 @@ func NewPredictor(profile models.TSProfile) *Predictor {
 type Predictor struct {
 	profile      models.TSProfile
 	currentState map[string]string
+	currentPhase int
 	mode         PredictionMode
 }
 
@@ -31,15 +33,24 @@ type nextState struct {
 }
 
 // NextState simulates next states for each metric using a random variable and the TSProfile's probabilities
-func (predictor *Predictor) nextState(currentState map[string]string) map[string]nextState {
+func (predictor *Predictor) nextState() map[string]nextState {
 	states := make(map[string]nextState)
+	var txmatrices []models.TxMatrix
 
 	// define which matrices to be used (default: root matrix)
-	txmatrices := predictor.profile.PeriodTree.Root.TxMatrix
-	// TODO allow other PredictionModes
+	if predictor.mode == PredictionModeRootTx {
+		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
+	} else if predictor.mode == PredictionModePhases {
+		predictor.nextPhase()
+		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
+	} else {
+		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
+		// fallback: root tx
+		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
+	}
 
 	// for each metric
-	for metric, stateHistory := range currentState {
+	for metric, stateHistory := range predictor.currentState {
 		// find matrix for metric
 		txmatrix, err := findMetricInTxMatrices(txmatrices, metric)
 		if err != nil {
@@ -50,7 +61,7 @@ func (predictor *Predictor) nextState(currentState map[string]string) map[string
 		// find stateHistory in txmatrix
 		txstep, err := findStateHistoryInTxMatrix(txmatrix, stateHistory)
 		if err != nil {
-			fmt.Printf("%s\n", err)
+			fmt.Printf("%s (phase %d, txmatrix %+v)\n", err, predictor.currentPhase, txmatrix)
 			continue
 		}
 
@@ -71,6 +82,24 @@ func (predictor *Predictor) nextState(currentState map[string]string) map[string
 	return states
 }
 
+func (predictor *Predictor) nextPhase() {
+	currentPhase := predictor.currentPhase
+	txmatrix := predictor.profile.Phases.Tx
+	txstep, err := findStateHistoryInTxMatrix(txmatrix, fmt.Sprintf("%d", currentPhase))
+	next, err := computeNextState(txstep.NextStateProbs)
+	if err != nil {
+		fmt.Printf("phase change error: %s\n", err)
+		return
+	}
+	// fmt.Printf("phase now %d\n", next)
+	predictor.currentPhase = next
+	// when phase change, reset also history!
+	if currentPhase != next {
+		// fmt.Printf("phase change (%d -> %d), new init state\n", currentPhase, next)
+		predictor.initializeState()
+	}
+}
+
 // SetState defines the given currentState for the next simulation
 func (predictor *Predictor) SetState(currentState map[string]string) {
 	predictor.currentState = currentState
@@ -86,7 +115,7 @@ func (predictor *Predictor) Simulate(steps int) [][]models.TSState {
 	simulation := make([][]models.TSState, steps)
 	// fmt.Printf("start simulation with state %s\n", currentState)
 	for i := 0; i < steps; i++ {
-		next := predictor.nextState(predictor.currentState)
+		next := predictor.nextState()
 		j := 0
 		simulation[i] = make([]models.TSState, len(next))
 		nextStateHistory := make(map[string]string)
@@ -113,7 +142,18 @@ func (predictor *Predictor) Simulate(steps int) [][]models.TSState {
 
 func (predictor *Predictor) initializeState() {
 	currentState := make(map[string]string)
-	for _, tx := range predictor.profile.PeriodTree.Root.TxMatrix {
+
+	var txmatrices []models.TxMatrix
+	if predictor.mode == PredictionModeRootTx {
+		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
+	} else if predictor.mode == PredictionModePhases {
+		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
+	} else {
+		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
+		// fallback: root tx
+		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
+	}
+	for _, tx := range txmatrices {
 		if _, exists := currentState[tx.Metric]; !exists {
 			// find state with highest probability
 			state := ""
