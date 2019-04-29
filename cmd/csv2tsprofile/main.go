@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -26,6 +27,7 @@ var options struct {
 	FixedMax          float64 `long:"fixedmax" default:"100" description:"if fixedbound is set, set the max value"`
 	PeriodSize        string  `long:"periodsize" default:"" description:"comma separated list of ints, specifies descrete states per period"`
 	PeriodChangeRatio float64 `long:"periodchangeratio" default:"0.2" description:"accepted ratio [0,1] for changes, alert if above"`
+	Outputfile        string  `long:"output" default:"-" description:"path to write profile to, stdout if '-'"`
 	Inputfile         string
 }
 
@@ -150,5 +152,17 @@ func profileOutput() {
 		fmt.Printf("cannot create json: %s (original: %+v)\n", err, profile)
 		return
 	}
-	fmt.Printf("%s\n", json)
+
+	if options.Outputfile == "-" {
+		// print to stdout
+		fmt.Printf("%s\n", json)
+	} else {
+		// write to file
+		err := ioutil.WriteFile(options.Outputfile, json, 0644)
+		if err != nil {
+			fmt.Printf("cannot write json to file %s: %s\n", options.Outputfile, err)
+			return
+		}
+	}
+
 }
