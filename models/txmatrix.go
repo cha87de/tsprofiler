@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -57,10 +58,51 @@ func (txMatrix *TxMatrix) Merge(txMatrixRemote TxMatrix) {
 	}
 }
 
+// Likeliness computes the likeliness for transitioning from the from state to the to state
+func (txMatrix *TxMatrix) Likeliness(from []TSState, to TSState) float32 {
+
+	fromIndex := ""
+	for len(from) > 0 {
+		fromIndex = fromString(from)
+		if _, ok := txMatrix.Transitions[fromIndex]; ok {
+			// found history
+			break
+		} else {
+			// cut history
+			from = from[1:]
+		}
+	}
+
+	probs, ok := txMatrix.Transitions[fromIndex]
+	if !ok {
+		fmt.Printf("from state %+v not found\n", from)
+		fmt.Printf("%+v", txMatrix.Transitions)
+		return 0
+	}
+	if int(to.State.Value) > len(probs.NextStateProbs) {
+		fmt.Printf("cannot compute likeliness: to state not existent")
+		return 0
+	}
+	toProb := probs.NextStateProbs[to.State.Value]
+
+	return float32(toProb) / 100
+}
+
 func round(x float64) float64 {
 	t := math.Trunc(x)
 	if math.Abs(x-t) >= 0.5 {
 		return t + math.Copysign(1, x)
 	}
 	return t
+}
+
+func fromString(from []TSState) string {
+	fromIndex := ""
+	for _, s := range from {
+		if fromIndex != "" {
+			fromIndex = fromIndex + "-"
+		}
+		fromIndex = fromIndex + fmt.Sprintf("%d", s.State.Value)
+	}
+	return fromIndex
 }

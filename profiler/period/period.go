@@ -201,9 +201,15 @@ func (period *Period) GetPhasesTx() models.Phases {
 		txs[i] = phaseTx
 	}
 	tx := period.phaseTxCounter.GetTx()
+	var txMetric models.TxMatrix
+	if len(tx) > 0 {
+		txMetric = tx[0]
+		/*} else {
+		fmt.Printf("tx metric 0 ?! wtf")*/
+	}
 	return models.Phases{
-		Phases: txs,   // the list of detected phases
-		Tx:     tx[0], // phase tx has only one metric by design
+		Phases: txs,      // the list of detected phases
+		Tx:     txMetric, // phase tx has only one metric by design
 	}
 }
 

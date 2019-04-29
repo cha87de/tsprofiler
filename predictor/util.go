@@ -62,7 +62,11 @@ func computeNextState(nextStateProbs []int) (int, error) {
 }
 
 func computeValueFromState(state int, states int, min float64, max float64, stddev float64) int64 {
-	stateSize := math.Round((max - min) / float64(states))
+	stateSize := math.Round(float64(max-min) / float64(states))
+	if stateSize <= 0 {
+		//fmt.Printf("stateSize 0?!")
+		return int64(0)
+	}
 	noise := float64(rand.Intn(int(stateSize))) * (stddev / max)
 	value := min + float64(state)*stateSize + noise
 	return int64(math.Round(value))
