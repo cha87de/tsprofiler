@@ -1,13 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/cha87de/tsprofiler/models"
 	"github.com/cha87de/tsprofiler/predictor"
+	"github.com/cha87de/tsprofiler/utils"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -20,7 +19,7 @@ var options struct {
 func main() {
 	initializeFlags()
 
-	profile := readProfileFromFile(options.Inputfile)
+	profile := utils.ReadProfileFromFile(options.Inputfile)
 	predictor := predictor.NewPredictor(profile)
 	predictor.SetMode(options.Mode)
 	/*predictor.SetState(map[string]string{
@@ -58,20 +57,6 @@ func initializeFlags() {
 		os.Exit(1)
 	}
 	options.Inputfile = args[0]
-}
-
-func readProfileFromFile(filepath string) models.TSProfile {
-	filehandler, err := os.Open(filepath)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer filehandler.Close()
-	byteValue, _ := ioutil.ReadAll(filehandler)
-
-	var profile models.TSProfile
-	json.Unmarshal(byteValue, &profile)
-
-	return profile
 }
 
 func printSimulation(simulation [][]models.TSState) {
