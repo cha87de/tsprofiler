@@ -21,5 +21,6 @@ func TestClosestDiscretize(t *testing.T) {
 		So(ClosestDiscretize(55, 4, 0, 100).Value, ShouldEqual, 2)
 		So(ClosestDiscretize(70, 2, 0, 100).Value, ShouldEqual, 1)
 		So(ClosestDiscretize(0, 4, 0, 0).Value, ShouldEqual, 0)
+		So(ClosestDiscretize(91, 4, 0, 100).Value, ShouldEqual, 3)
 	})
 }

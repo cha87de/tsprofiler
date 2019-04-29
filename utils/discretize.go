@@ -1,6 +1,8 @@
 package utils
 
-import "github.com/cha87de/tsprofiler/models"
+import (
+	"github.com/cha87de/tsprofiler/models"
+)
 
 // SimpleDiscretize returns a state between min and max with maxstate steps of given value finding the smallest state
 func SimpleDiscretize(value float64, maxstate int, min float64, max float64) models.State {
@@ -34,6 +36,13 @@ func ClosestDiscretize(value float64, maxstate int, min float64, max float64) mo
 			return models.State{
 				Value: int64(i),
 			}
+		}
+	}
+	maxupperbound := float64(maxstate-1)*stateStepSize + 0.5*stateStepSize
+	if value >= maxupperbound {
+		// exceeding the bound towards top
+		return models.State{
+			Value: int64(maxstate - 1),
 		}
 	}
 	return models.State{
