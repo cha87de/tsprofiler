@@ -1,12 +1,14 @@
 # Build customization
 builds:
-  - main: ./cmd/csv2tsprofile
+  - id: "csv2tsprofile"
+    main: ./cmd/csv2tsprofile
     binary: csv2tsprofile
     goos:
       - linux
     goarch:
       - amd64
-  - main: ./cmd/tspredictor
+  - id: "tspredictor"
+    main: ./cmd/tspredictor
     binary: tspredictor
     goos:
       - linux
