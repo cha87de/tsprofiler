@@ -14,18 +14,21 @@ builds:
       - amd64      
 
 nfpms:
-  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - 
+    id: tsprofiler
+    
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
-  vendor: Christopher B. Hauser
-  homepage: https://cha87de.github.io/tsprofiler/
-  maintainer: Christopher B. Hauser <post@c-ha.de>
-  description: a profiler for time series data - integrates well in kvmtop
-  license: GPL-3.0
+    vendor: Christopher B. Hauser
+    homepage: https://cha87de.github.io/tsprofiler/
+    maintainer: Christopher B. Hauser <post@c-ha.de>
+    description: a profiler for time series data - integrates well in kvmtop
+    license: GPL-3.0
 
-  # Formats to be generated.
-  formats:
-    - deb
-    - rpm
+    # Formats to be generated.
+    formats:
+      - deb
+      - rpm
 
-  # Override default /usr/local/bin destination for binaries
-  bindir: /usr/bin
+    # Override default /usr/local/bin destination for binaries
+    bindir: /usr/bin
