@@ -15,8 +15,6 @@ builds:
 
 nfpms:
   - 
-    id: tsprofiler
-    
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
     vendor: Christopher B. Hauser
