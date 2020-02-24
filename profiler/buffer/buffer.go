@@ -37,7 +37,7 @@ type Buffer struct {
 
 // Add adds the given tsdata item to its metric buffer
 func (buffer *Buffer) Add(data models.TSInput) {
-	currentStates := buffer.profiler.GetCurrentState()
+	currentStats := buffer.profiler.GetCurrentStats()
 
 	// for each metric ...
 	for _, input := range data.Metrics {
@@ -52,7 +52,7 @@ func (buffer *Buffer) Add(data models.TSInput) {
 		}
 
 		// OUTLIER CHECK?
-		currentState, currentStateFound := currentStates[metric]
+		currentState, currentStateFound := currentStats[metric]
 		if currentStateFound {
 			utils.IsOutlier(input.Value, currentState.Avg, currentState.Stddev, buffer.filterStdDevs)
 		}

@@ -31,11 +31,13 @@ var options struct {
 	PhaseChangeMincount   int64   `long:"phasechangemincount" default:"60"`
 	Outputfile            string  `long:"output" default:"-" description:"path to write profile to, stdout if '-'"`
 	PhasesFile            string  `long:"out.phases" default:""`
+	StatesFile            string  `long:"out.states" default:""`
 	Inputfile             string
 }
 
 var tsprofiler api.TSProfiler
 var phasesfile *os.File
+var statesfile *os.File
 
 func main() {
 	initializeFlags()
@@ -46,11 +48,19 @@ func main() {
 	// create & open output file
 	if options.PhasesFile != "" && options.PhasesFile != "-" {
 		var err error
-		phasesfile, err = os.OpenFile(options.PhasesFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		phasesfile, err = os.OpenFile(options.PhasesFile, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer phasesfile.Close()
+	}
+	if options.StatesFile != "" && options.StatesFile != "-" {
+		var err error
+		statesfile, err = os.OpenFile(options.StatesFile, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer statesfile.Close()
 	}
 
 	// read file line by line
@@ -160,18 +170,40 @@ func putMeasurement(utilValue []float64) {
 	}
 	tsprofiler.Put(tsinput)
 
-	//state := tsprofiler.GetCurrentState()
+	// print phases
 	phaseid := tsprofiler.GetCurrentPhase()
-	// handle phases output
-	row := fmt.Sprintf("%d\n", phaseid)
 	if options.PhasesFile == "-" {
 		// use stdout
+		row := fmt.Sprintf("%d\n", phaseid)
 		fmt.Print(row)
 	} else if options.PhasesFile == "" {
 		// ignore likeliness
 	} else {
 		// print to file
+		row := fmt.Sprintf("%d\n", phaseid)
 		if _, err := phasesfile.Write([]byte(row)); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// print states
+	state := tsprofiler.GetCurrentState()
+	stateRow := ""
+	for _, s := range state {
+		if stateRow != "" {
+			stateRow = stateRow + " "
+		}
+		stateRow = fmt.Sprintf("%s%d", stateRow, s.State.Value)
+	}
+	stateRow = stateRow + "\n"
+	if options.StatesFile == "-" {
+		// use stdout
+		fmt.Print(stateRow)
+	} else if options.StatesFile == "" {
+		// ignore
+	} else {
+		// print to file
+		if _, err := statesfile.Write([]byte(stateRow)); err != nil {
 			log.Fatal(err)
 		}
 	}

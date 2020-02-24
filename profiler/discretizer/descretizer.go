@@ -33,11 +33,11 @@ type Discretizer struct {
 // Discretize performs the computation of a discrete state from a TSBuffer
 func (discretizer *Discretizer) Discretize(buffers []models.TSBuffer) []models.TSState {
 	states := make([]models.TSState, len(buffers))
-	currentStates := discretizer.profiler.GetCurrentState()
+	currentStats := discretizer.profiler.GetCurrentStats()
 	// for each metric ...
 	for i, buffer := range buffers {
 		// find matching currentState
-		currentState, currentStateFound := currentStates[buffer.Metric]
+		currentState, currentStateFound := currentStats[buffer.Metric]
 		var currentAvg float64
 		if currentStateFound {
 			currentAvg = currentState.Avg

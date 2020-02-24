@@ -53,9 +53,14 @@ func (profiler *Profiler) Get() models.TSProfile {
 	return profiler.generateProfile()
 }
 
-// GetCurrentState returns the current state for each metric
-func (profiler *Profiler) GetCurrentState() map[string]models.TSStats {
+// GetCurrentStats returns the current stats for each metric
+func (profiler *Profiler) GetCurrentStats() map[string]models.TSStats {
 	return profiler.period.GetStats()
+}
+
+// GetCurrentState returns the current state for each metric
+func (profiler *Profiler) GetCurrentState() []models.TSState {
+	return profiler.period.GetState()
 }
 
 // GetCurrentPhase returns the current phase id
