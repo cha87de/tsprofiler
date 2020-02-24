@@ -24,7 +24,7 @@ discretized utilisation states, and a *Decision Tree* to handle periodic
 recurrent Markov transition matrices (the period tree). Automatic phase
 detection further identifies pattern changes.
 
-![TSProfiler Architecture](docs/extended-tsprofiler.svg "TSProfiler Architecture")
+![TSProfiler Architecture](docs/extended-tsprofiler.png "TSProfiler Architecture")
 
 
 ## Usage Guide
