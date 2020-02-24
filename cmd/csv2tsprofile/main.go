@@ -18,26 +18,40 @@ import (
 )
 
 var options struct {
-	States            int     `long:"states" default:"4"`
-	BufferSize        int     `long:"buffersize" default:"10"`
-	History           int     `long:"history" default:"1"`
-	FilterStdDevs     int     `long:"filterstddevs" default:"2"`
-	FixedBound        bool    `long:"fixedbound"`
-	FixedMin          float64 `long:"fixedmin" default:"0" description:"if fixedbound is set, set the min value"`
-	FixedMax          float64 `long:"fixedmax" default:"100" description:"if fixedbound is set, set the max value"`
-	PeriodSize        string  `long:"periodsize" default:"" description:"comma separated list of ints, specifies descrete states per period"`
-	PeriodChangeRatio float64 `long:"periodchangeratio" default:"0.2" description:"accepted ratio [0,1] for changes, alert if above"`
-	Outputfile        string  `long:"output" default:"-" description:"path to write profile to, stdout if '-'"`
-	Inputfile         string
+	States                int     `long:"states" default:"4"`
+	BufferSize            int     `long:"buffersize" default:"10"`
+	History               int     `long:"history" default:"1"`
+	FilterStdDevs         int     `long:"filterstddevs" default:"2"`
+	FixedBound            bool    `long:"fixedbound"`
+	FixedMin              float64 `long:"fixedmin" default:"0" description:"if fixedbound is set, set the min value"`
+	FixedMax              float64 `long:"fixedmax" default:"100" description:"if fixedbound is set, set the max value"`
+	PeriodSize            string  `long:"periodsize" default:"" description:"comma separated list of ints, specifies descrete states per period"`
+	PeriodChangeRatio     float64 `long:"periodchangeratio" default:"0.2" description:"accepted ratio [0,1] for changes, alert if above"`
+	PhaseChangeLikeliness float32 `long:"phasechangelikeliness" default:"0.6"`
+	PhaseChangeMincount   int64   `long:"phasechangemincount" default:"60"`
+	Outputfile            string  `long:"output" default:"-" description:"path to write profile to, stdout if '-'"`
+	PhasesFile            string  `long:"out.phases" default:""`
+	Inputfile             string
 }
 
 var tsprofiler api.TSProfiler
+var phasesfile *os.File
 
 func main() {
 	initializeFlags()
 
 	// create new ts profiler
 	initProfiler()
+
+	// create & open output file
+	if options.PhasesFile != "" && options.PhasesFile != "-" {
+		var err error
+		phasesfile, err = os.OpenFile(options.PhasesFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer phasesfile.Close()
+	}
 
 	// read file line by line
 	readFile(options.Inputfile)
@@ -89,13 +103,15 @@ func initProfiler() {
 
 	// create new profiler
 	tsprofiler = profiler.NewProfiler(models.Settings{
-		Name:          "csv2tsprofile",
-		BufferSize:    options.BufferSize,
-		States:        options.States,
-		FilterStdDevs: options.FilterStdDevs,
-		History:       options.History,
-		FixBound:      options.FixedBound,
-		PeriodSize:    periodSize,
+		Name:                  "csv2tsprofile",
+		BufferSize:            options.BufferSize,
+		States:                options.States,
+		FilterStdDevs:         options.FilterStdDevs,
+		History:               options.History,
+		FixBound:              options.FixedBound,
+		PeriodSize:            periodSize,
+		PhaseChangeLikeliness: options.PhaseChangeLikeliness,
+		PhaseChangeMincount:   options.PhaseChangeMincount,
 	})
 }
 
@@ -143,6 +159,22 @@ func putMeasurement(utilValue []float64) {
 		Metrics: metrics,
 	}
 	tsprofiler.Put(tsinput)
+
+	//state := tsprofiler.GetCurrentState()
+	phaseid := tsprofiler.GetCurrentPhase()
+	// handle phases output
+	row := fmt.Sprintf("%d\n", phaseid)
+	if options.PhasesFile == "-" {
+		// use stdout
+		fmt.Print(row)
+	} else if options.PhasesFile == "" {
+		// ignore likeliness
+	} else {
+		// print to file
+		if _, err := phasesfile.Write([]byte(row)); err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func profileOutput() {

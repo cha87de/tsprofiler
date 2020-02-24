@@ -36,7 +36,7 @@ func (profiler *Profiler) initialize(settings models.Settings) {
 	// initialize sub components
 	profiler.buffer = buffer.NewBuffer(settings.FilterStdDevs, profiler)
 	profiler.discretizer = discretizer.NewDiscretizer(settings.States, settings.FixBound, profiler)
-	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, profiler)
+	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, settings.PhaseChangeLikeliness, settings.PhaseChangeMincount, profiler)
 
 	// start input & output background routines
 	go profiler.outputRunner()
@@ -56,6 +56,11 @@ func (profiler *Profiler) Get() models.TSProfile {
 // GetCurrentState returns the current state for each metric
 func (profiler *Profiler) GetCurrentState() map[string]models.TSStats {
 	return profiler.period.GetStats()
+}
+
+// GetCurrentPhase returns the current phase id
+func (profiler *Profiler) GetCurrentPhase() int {
+	return profiler.period.GetPhase()
 }
 
 // Terminate stops and removes the profiler

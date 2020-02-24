@@ -61,8 +61,8 @@ func (txMatrix *TxMatrix) Merge(txMatrixRemote TxMatrix) {
 // Likeliness computes the likeliness for transitioning from the from state to the to state
 func (txMatrix *TxMatrix) Likeliness(from []TSState, to TSState) float32 {
 
-	fromIndex := ""
-	for len(from) > 0 {
+	fromIndex := fromString(from)
+	for len(from) > 1 {
 		fromIndex = fromString(from)
 		if _, ok := txMatrix.Transitions[fromIndex]; ok {
 			// found history
@@ -75,8 +75,7 @@ func (txMatrix *TxMatrix) Likeliness(from []TSState, to TSState) float32 {
 
 	probs, ok := txMatrix.Transitions[fromIndex]
 	if !ok {
-		fmt.Printf("from state %+v not found\n", from)
-		fmt.Printf("%+v", txMatrix.Transitions)
+		//fmt.Printf("from state %+v not found\n", from)
 		return 0
 	}
 	if int(to.State.Value) > len(probs.NextStateProbs) {

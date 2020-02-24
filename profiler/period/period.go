@@ -10,7 +10,7 @@ import (
 )
 
 // NewPeriod initializes and returns a new Period
-func NewPeriod(history int, states int, buffersize int, periodSize []int, profiler api.TSProfiler) Period {
+func NewPeriod(history int, states int, buffersize int, periodSize []int, phaseLikeliness float32, phaseMin int64, profiler api.TSProfiler) Period {
 	period := Period{
 		profiler: profiler,
 
@@ -31,14 +31,12 @@ func NewPeriod(history int, states int, buffersize int, periodSize []int, profil
 		txTreePosition: make([]int, len(periodSize)),
 
 		// configs
-		history:    history,
-		states:     states,
-		buffersize: buffersize,
-		periodSize: periodSize,
-
-		// TODO MAKE THIS CONFIGURABLE
-		phaseThresholdLikeliness: 0.6,
-		phaseThresholdCounts:     60,
+		history:                  history,
+		states:                   states,
+		buffersize:               buffersize,
+		periodSize:               periodSize,
+		phaseThresholdLikeliness: phaseLikeliness,
+		phaseThresholdCounts:     phaseMin,
 	}
 	// create a counter for each entry in periodSize / for each level in PeriodTree
 	for i := range periodSize {
@@ -88,7 +86,17 @@ func (period *Period) Count(tsstates []models.TSState) {
 	period.access.Lock()
 	defer period.access.Unlock()
 
+	// global all time counting
 	period.overallCounter.Count(tsstates)
+
+	// Phase detection and counting
+	period.countPhases(tsstates)
+
+	// period tree counting
+	period.countPeriodTree(tsstates)
+}
+
+func (period *Period) countPhases(tsstates []models.TSState) {
 	likeliness := period.phaseCounters[period.phasePointer].Likeliness(tsstates)
 	counts := period.phaseCounters[period.phasePointer].Totalcounts()
 	if likeliness < period.phaseThresholdLikeliness && counts > period.phaseThresholdCounts {
@@ -134,6 +142,9 @@ func (period *Period) Count(tsstates []models.TSState) {
 	}
 	period.phaseTxCounter.Update(len(period.phaseCounters))
 	period.phaseTxCounter.Count(phaseTsstates)
+}
+
+func (period *Period) countPeriodTree(tsstates []models.TSState) {
 
 	// count for each period
 	for i, size := range period.periodSize {
@@ -184,7 +195,6 @@ func (period *Period) Count(tsstates []models.TSState) {
 			period.periodSizeCounter[i] = 0
 		}
 	}
-
 }
 
 // GetTx returns for each period the counters' TSProfileMetric matrix
@@ -217,4 +227,9 @@ func (period *Period) GetPhasesTx() models.Phases {
 func (period *Period) GetStats() map[string]models.TSStats {
 	// take period's overall counter
 	return period.overallCounter.GetStats()
+}
+
+// GetPhase returns the current phase pointer
+func (period *Period) GetPhase() int {
+	return period.phasePointer
 }

@@ -10,6 +10,6 @@ const (
 	// PredictionModePhases defines the mode "Phases", which uses the TSProfile's phases
 	PredictionModePhases PredictionMode = 1
 
-	// PredictionModePeriods defines the mode "RootTx", which uses the TSProfile's periods
+	// PredictionModePeriods defines the mode "Periods", which uses the TSProfile's periods
 	PredictionModePeriods PredictionMode = 2
 )

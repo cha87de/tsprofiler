@@ -119,16 +119,29 @@ func (counter *Counter) count(tsstate models.TSState) {
 
 	stats := tsstate.Statistics
 	globalStats := counter.stats[metric]
-	if counter.stats[metric].Min == -1 || counter.stats[metric].Min > stats.Min || counter.stats[metric].Max < stats.Max {
-		// min/max changed? update tx matrix dimension
+	//fmt.Printf("minmaxs global (%f,%f) local (%f,%f)\n", globalStats.Min, globalStats.Max, stats.Min, stats.Max)
+	if globalStats.Min == -1 {
+		// set min /max
+		globalStats.Min = stats.Min
+		globalStats.Max = stats.Max
+	}
+	changeDimension := false
+	if globalStats.Min > stats.Min {
+		// lower min found ... update
+		//fmt.Printf("lower min found ... update from %.4f to %.4f\n", globalStats.Min, stats.Min)
+		globalStats.Min = stats.Min
+		changeDimension = true
+	}
+	if globalStats.Max < stats.Max {
+		// higher max found ... update
+		//fmt.Printf("higher max found ... update from %.4f to %.4f\n", globalStats.Max, stats.Max)
+		globalStats.Max = stats.Max
+		changeDimension = true
+	}
+	if changeDimension {
+		//fmt.Printf("before: %+v\n", counter.stateChangeCounters[metric])
 		counter.stateChangeCounters[metric] = utils.ChangeDimension(counter.stateChangeCounters[metric], counter.stats[metric], stats, counter.states)
-
-		if globalStats.Min == -1 || globalStats.Min > stats.Min {
-			globalStats.Min = stats.Min
-		}
-		if globalStats.Max < stats.Max {
-			globalStats.Max = stats.Max
-		}
+		//fmt.Printf("after: %+v\n", counter.stateChangeCounters[metric])
 	}
 
 	// update global stats from incoming stats

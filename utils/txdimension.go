@@ -20,6 +20,17 @@ func ChangeDimension(sourceMatrix map[string][]int64, oldStats models.TSStats, n
 	newMin := newStats.Min
 	newMax := newStats.Max
 
+	//fmt.Printf("change dimensions from (%f,%f) to (%f,%f)\n", oldMin, oldMax, newMin, newMax)
+
+	if newMin > oldMin {
+		//fmt.Printf("Error: newMin larger than oldMin\n")
+		newMin = oldMin // reset
+	}
+	if newMax < oldMax {
+		//fmt.Printf("Error: newMax lower than oldMax\n")
+		newMax = oldMax // reset
+	}
+
 	for key := range sourceMatrix {
 		var newKey string
 		for j := range sourceMatrix[key] {
