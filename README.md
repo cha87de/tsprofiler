@@ -17,13 +17,14 @@
 *TSProfiler* provides a go implementation to convert time series stream data
 like monitoring data online into statistical representative profiles. TSProfiler
 is integrated into the KVM monitoring tool
-[kvmtop](https://github.com/cha87de/kvmtop/tree/profiler).
+[kvmtop](https://github.com/cha87de/kvmtop/tree/profiler) directly, or for distributed setups into the [DisResc Monitoring Library](https://github.com/disresc/profiler).
 
 The core concept bases on *Markov Chain*s to represent the probability of a
 discretized utilisation states, and a *Decision Tree* to handle periodic
-recurrent Markov transition matrices.
+recurrent Markov transition matrices (the period tree). Automatic phase
+detection further identifies pattern changes.
 
-![TSProfiler Architecture](overview.png "TSProfiler Architecture")
+![TSProfiler Architecture](docs/extended-tsprofiler.svg "TSProfiler Architecture")
 
 
 ## Usage Guide
@@ -63,7 +64,7 @@ Example: `csv2tsprofile --states 4 --history 1 --filterstddevs 4 --buffersize 6 
 Create a new TSProfiler:
 
 ```go
-profiler = tsprofiler = profiler.NewProfiler(models.Settings{
+tsprofiler := profiler.NewProfiler(models.Settings{
 		Name:          "profiler-hostX",
 		BufferSize:    10,
 		States:        4,
