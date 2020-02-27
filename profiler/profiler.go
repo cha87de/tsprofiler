@@ -7,6 +7,7 @@ import (
 	"github.com/cha87de/tsprofiler/profiler/buffer"
 	"github.com/cha87de/tsprofiler/profiler/discretizer"
 	"github.com/cha87de/tsprofiler/profiler/period"
+	"github.com/cha87de/tsprofiler/profiler/phase"
 )
 
 // NewProfiler creates and returns a new TSProfiler, configured with given Settings
@@ -26,6 +27,7 @@ type Profiler struct {
 	buffer      buffer.Buffer
 	discretizer discretizer.Discretizer
 	period      period.Period
+	phase       phase.Phase
 }
 
 func (profiler *Profiler) initialize(settings models.Settings) {
@@ -36,7 +38,8 @@ func (profiler *Profiler) initialize(settings models.Settings) {
 	// initialize sub components
 	profiler.buffer = buffer.NewBuffer(settings.FilterStdDevs, profiler)
 	profiler.discretizer = discretizer.NewDiscretizer(settings.States, settings.FixBound, profiler)
-	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, settings.PhaseChangeLikeliness, settings.PhaseChangeMincount, profiler)
+	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, profiler)
+	profiler.phase = phase.NewPhase(settings.History, settings.States, settings.BufferSize, settings.PhaseChangeLikeliness, settings.PhaseChangeMincount, profiler)
 
 	// start input & output background routines
 	go profiler.outputRunner()
@@ -65,7 +68,7 @@ func (profiler *Profiler) GetCurrentState() []models.TSState {
 
 // GetCurrentPhase returns the current phase id
 func (profiler *Profiler) GetCurrentPhase() int {
-	return profiler.period.GetPhase()
+	return profiler.phase.GetPhase()
 }
 
 // Terminate stops and removes the profiler
@@ -88,6 +91,7 @@ func (profiler *Profiler) inputListener() {
 			tsbuffers := profiler.buffer.Reset()
 			tsstates := profiler.discretizer.Discretize(tsbuffers)
 			profiler.period.Count(tsstates)
+			profiler.phase.Count(tsstates)
 			itemCount = 0
 		}
 	}
@@ -111,7 +115,7 @@ func (profiler *Profiler) outputRunner() {
 // generateProfile collects the necessary data to return a TSProfile
 func (profiler *Profiler) generateProfile() models.TSProfile {
 	periodTree := profiler.period.GetTx()
-	phases := profiler.period.GetPhasesTx()
+	phases := profiler.phase.GetPhasesTx()
 	return models.TSProfile{
 		Name:       profiler.settings.Name,
 		PeriodTree: periodTree,
