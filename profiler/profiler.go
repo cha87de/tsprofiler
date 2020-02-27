@@ -71,6 +71,11 @@ func (profiler *Profiler) GetCurrentPhase() int {
 	return profiler.phase.GetPhase()
 }
 
+// GetCurrentPeriodPath returns the current period path
+func (profiler *Profiler) GetCurrentPeriodPath() []int {
+	return profiler.period.GetCurrentPeriodPath()
+}
+
 // Terminate stops and removes the profiler
 func (profiler *Profiler) Terminate() {
 	profiler.stopped = true

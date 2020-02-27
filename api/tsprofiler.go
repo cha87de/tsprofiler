@@ -16,6 +16,7 @@ type TSProfiler interface {
 	GetCurrentStats() map[string]models.TSStats
 	GetCurrentState() []models.TSState
 	GetCurrentPhase() int
+	GetCurrentPeriodPath() []int
 
 	// Terminate stops and removes the profiler
 	Terminate()

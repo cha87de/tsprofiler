@@ -152,3 +152,8 @@ func (period *Period) GetStats() map[string]models.TSStats {
 func (period *Period) GetState() []models.TSState {
 	return period.lastStates
 }
+
+// GetCurrentPeriodPath returns the current tree positions
+func (period *Period) GetCurrentPeriodPath() []int {
+	return period.txTreePosition
+}
