@@ -20,10 +20,12 @@ func NewPredictor(profile models.TSProfile) *Predictor {
 
 // Predictor offers prediction of the TSProfile the predictor is bound to
 type Predictor struct {
-	profile      models.TSProfile
-	currentState map[string]string
-	currentPhase int
-	mode         PredictionMode
+	profile         models.TSProfile
+	currentState    map[string]string
+	currentPhase    int
+	periodPath      []int
+	periodPathDepth int
+	mode            PredictionMode
 }
 
 type nextState struct {
@@ -43,6 +45,10 @@ func (predictor *Predictor) nextState() map[string]nextState {
 	} else if predictor.mode == PredictionModePhases {
 		predictor.nextPhase()
 		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
+	} else if predictor.mode == PredictionModePeriods {
+		fmt.Printf("todo period mode")
+		//predictor.nextPeriodStep()
+		//txmatrices = predictor.profile.PeriodTree.
 	} else {
 		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
 		// fallback: root tx
@@ -100,6 +106,21 @@ func (predictor *Predictor) nextPhase() {
 	}
 }
 
+func (predictor *Predictor) nextPeriod() {
+	if len(predictor.periodPath) > predictor.periodPathDepth {
+		fmt.Printf("periodDepth is larger than periodPath! Impossible!")
+		return
+	}
+	for i := 0; i < predictor.periodPathDepth; i++ {
+		predictor.periodPath[i]++
+		node := predictor.profile.PeriodTree.GetNode(predictor.periodPath[:i+1])
+		if predictor.periodPath[i] >= node.MaxChilds {
+			// move on!
+
+		}
+	}
+}
+
 // SetState defines the given currentState for the next simulation
 func (predictor *Predictor) SetState(currentState map[string]string) {
 	predictor.currentState = currentState
@@ -108,6 +129,12 @@ func (predictor *Predictor) SetState(currentState map[string]string) {
 // SetPhase defines the given phase for the next simulation
 func (predictor *Predictor) SetPhase(currentPhase int) {
 	predictor.currentPhase = currentPhase
+}
+
+// SetPeriodPath defines the current path in the period tree
+func (predictor *Predictor) SetPeriodPath(periodPath []int, periodPathDepth int) {
+	predictor.periodPath = periodPath
+	predictor.periodPathDepth = periodPathDepth
 }
 
 // SetMode defines the given PredictionMode for the next simulation
@@ -183,6 +210,9 @@ func (predictor *Predictor) initializeState() {
 		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
 	} else if predictor.mode == PredictionModePhases {
 		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
+	} else if predictor.mode == PredictionModePeriods {
+		// TODO
+		fmt.Printf("TODO initialize State for Periods")
 	} else {
 		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
 		// fallback: root tx

@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
+
+	"github.com/cha87de/tsprofiler/cmd/tspredictor/task"
 
 	"github.com/cha87de/tsprofiler/models"
 	"github.com/cha87de/tsprofiler/predictor"
@@ -11,30 +14,36 @@ import (
 )
 
 var options struct {
-	Steps     int                      `long:"steps" default:"40"`
-	Mode      predictor.PredictionMode `long:"mode" default:"0"`
-	Inputfile string
+	Steps       int                      `long:"steps" default:"40"`
+	Mode        predictor.PredictionMode `long:"mode" default:"0"`
+	Profilefile string                   `long:"profile" short:"p"`
+	Historyfile string                   `long:"history" short:"h"`
+	Task        string
 }
 
 func main() {
 	initializeFlags()
 
-	profile := utils.ReadProfileFromFile(options.Inputfile)
-	predictor := predictor.NewPredictor(profile)
-	predictor.SetMode(options.Mode)
-	/*predictor.SetState(map[string]string{
-		"metric_0": "0",
-	})*/
-	simulation := predictor.Simulate(options.Steps)
+	profile := utils.ReadProfileFromFile(options.Profilefile)
+	history := models.ReadHistoryFromFile(options.Historyfile)
 
-	printSimulation(simulation)
+	switch options.Task {
+	case "simulate":
+		simulate := task.NewSimulate(profile, options.Mode, history)
+		simulate.Run(options.Steps)
+		simulate.Print()
+	case "likeliness":
+		fmt.Printf("likeliness not implemented yet")
+	default:
+		fmt.Printf("task %s unknown. Select \"simulate\" or \"likeliness\" as task.", options.Task)
+	}
 }
 
 func initializeFlags() {
 	// initialize parser for flags
 	parser := flags.NewParser(&options, flags.Default)
 	parser.ShortDescription = "tspredictor"
-	parser.LongDescription = "Simulates the next steps for a given tsprofile json file"
+	parser.LongDescription = "Reads a TSProfile from file and runs tasks on in (Simulate or Likeliness)"
 	parser.ArgsRequired = true
 
 	// Parse parameters
@@ -53,34 +62,8 @@ func initializeFlags() {
 	}
 
 	if len(args) < 1 {
-		fmt.Printf("No input file specified.\n")
+		fmt.Printf("No task specified. Select \"simulate\" or \"likeliness\" as task.\n")
 		os.Exit(1)
 	}
-	options.Inputfile = args[0]
-}
-
-func printSimulation(simulation [][]models.TSState) {
-	if len(simulation) <= 0 {
-		return
-	}
-
-	// print header
-	for i, tsstate := range simulation[0] {
-		if i > 0 {
-			fmt.Printf(",")
-		}
-		fmt.Printf("%s", tsstate.Metric)
-	}
-	fmt.Printf("\n")
-
-	// print rows
-	for _, simstep := range simulation {
-		for i, tsstate := range simstep {
-			if i > 0 {
-				fmt.Printf(",")
-			}
-			fmt.Printf("%d", tsstate.State.Value)
-		}
-		fmt.Printf("\n")
-	}
+	options.Task = strings.ToLower(args[0])
 }
