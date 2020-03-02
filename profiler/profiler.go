@@ -1,10 +1,12 @@
 package profiler
 
 import (
+	"sync"
 	"time"
 
 	"github.com/cha87de/tsprofiler/models"
 	"github.com/cha87de/tsprofiler/profiler/buffer"
+	"github.com/cha87de/tsprofiler/profiler/counter"
 	"github.com/cha87de/tsprofiler/profiler/discretizer"
 	"github.com/cha87de/tsprofiler/profiler/period"
 	"github.com/cha87de/tsprofiler/profiler/phase"
@@ -22,6 +24,12 @@ type Profiler struct {
 	input    chan models.TSInput
 	settings models.Settings
 	stopped  bool
+
+	// state
+	overallCounter counter.Counter
+	lastStates     []models.TSState
+
+	access *sync.Mutex
 
 	// sub components
 	buffer      buffer.Buffer
@@ -41,6 +49,11 @@ func (profiler *Profiler) initialize(settings models.Settings) {
 	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, profiler)
 	profiler.phase = phase.NewPhase(settings.History, settings.States, settings.BufferSize, settings.PhaseChangeLikeliness, settings.PhaseChangeMincount, profiler)
 
+	// initialize root tx counter
+	profiler.overallCounter = counter.NewCounter(settings.History, settings.States, settings.BufferSize, profiler)
+	profiler.lastStates = make([]models.TSState, 0)
+	profiler.access = &sync.Mutex{}
+
 	// start input & output background routines
 	go profiler.outputRunner()
 	go profiler.inputListener()
@@ -58,12 +71,12 @@ func (profiler *Profiler) Get() models.TSProfile {
 
 // GetCurrentStats returns the current stats for each metric
 func (profiler *Profiler) GetCurrentStats() map[string]models.TSStats {
-	return profiler.period.GetStats()
+	return profiler.overallCounter.GetStats()
 }
 
 // GetCurrentState returns the current state for each metric
 func (profiler *Profiler) GetCurrentState() []models.TSState {
-	return profiler.period.GetState()
+	return profiler.lastStates
 }
 
 // GetCurrentPhase returns the current phase id
@@ -95,9 +108,22 @@ func (profiler *Profiler) inputListener() {
 			// buffer is full, trigger discretizer!
 			tsbuffers := profiler.buffer.Reset()
 			tsstates := profiler.discretizer.Discretize(tsbuffers)
+
+			profiler.access.Lock()
+
+			// global all time counting
+			profiler.overallCounter.Count(tsstates)
+
+			// update lastState
+			profiler.lastStates = tsstates
+
+			// call sub components
 			profiler.period.Count(tsstates)
 			profiler.phase.Count(tsstates)
+
 			itemCount = 0
+
+			profiler.access.Unlock()
 		}
 	}
 }
@@ -120,6 +146,7 @@ func (profiler *Profiler) outputRunner() {
 // generateProfile collects the necessary data to return a TSProfile
 func (profiler *Profiler) generateProfile() models.TSProfile {
 	periodTree := profiler.period.GetTx()
+	periodTree.Root.TxMatrix = profiler.overallCounter.GetTx()
 	phases := profiler.phase.GetPhasesTx()
 	return models.TSProfile{
 		Name:       profiler.settings.Name,

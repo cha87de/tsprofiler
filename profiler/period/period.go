@@ -1,7 +1,6 @@
 package period
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/cha87de/tsprofiler/api"
@@ -13,10 +12,6 @@ import (
 func NewPeriod(history int, states int, buffersize int, periodSize []int, profiler api.TSProfiler) Period {
 	period := Period{
 		profiler: profiler,
-
-		// counters
-		overallCounter: counter.NewCounter(history, states, buffersize, profiler),
-		lastStates:     make([]models.TSState, 0),
 
 		periodCounters:    make([]counter.Counter, len(periodSize)),
 		periodSizeCounter: make([]int, len(periodSize)),
@@ -43,15 +38,12 @@ func NewPeriod(history int, states int, buffersize int, periodSize []int, profil
 	return period
 }
 
-// Period
+// Period holds counters etc to compute probabilities for given period size
 type Period struct {
 	// upper level profiler
 	profiler api.TSProfiler
 
 	// state
-	overallCounter counter.Counter
-	lastStates     []models.TSState
-
 	periodCounters    []counter.Counter
 	periodSizeCounter []int
 
@@ -73,28 +65,22 @@ func (period *Period) Count(tsstates []models.TSState) {
 	period.access.Lock()
 	defer period.access.Unlock()
 
-	// global all time counting
-	period.overallCounter.Count(tsstates)
-
 	// period tree counting
 	period.countPeriodTree(tsstates)
-
-	// update lastState
-	period.lastStates = tsstates
 }
 
 func (period *Period) countPeriodTree(tsstates []models.TSState) {
 
-	// count for each period
-	for i, size := range period.periodSize {
-		counter := period.periodCounters[i]
+	// count for each level in period tree
+	for level, levelSize := range period.periodSize {
+		counter := period.periodCounters[level]
 		counter.Count(tsstates)
-		period.periodSizeCounter[i]++
+		period.periodSizeCounter[level]++
 
-		if period.periodSizeCounter[i] >= size {
+		if period.periodSizeCounter[level] >= levelSize {
 			tx := counter.GetTx()
 			/*
-				period full!
+				counter on current period level is full!
 
 				- if no copy present, copy TSProfileMetric to this period txPerPeriod[i]
 				- if copy is present, check how it differs from the current counter.GetTx()
@@ -103,54 +89,36 @@ func (period *Period) countPeriodTree(tsstates []models.TSState) {
 			*/
 
 			x := period.txTreePosition
-			treePos := x[:len(period.txTreePosition)-i]
+			treePos := x[:len(period.txTreePosition)-level]
 			node := period.txTree.GetNode(treePos)
 
-			// alert or merge, depending on diff
+			// if tx lengths unequal, overwrite
 			if len(node.TxMatrix) != len(tx) {
 				node.TxMatrix = tx
-			}
-			// merge for each metric separately
-			for m := range tx {
-				localDiff := node.TxMatrix[m].Diff(tx[m])
-				// 1.0 means equal, 0.0 means not equal
-				fmt.Printf("localDiff is %.4f\n", localDiff)
-				// if localDiff > float64(0.8) {
-				node.TxMatrix[m].Merge(tx[m])
-				// fmt.Printf("%+v", node.TxMatrix[m].Transitions)
-				// } else {
-				//	fmt.Printf("ALERT: localDiff is %.4f\n", localDiff)
-				//}
+			} else {
+				// merge for each metric separately
+				for m := range tx {
+					node.TxMatrix[m].Merge(tx[m])
+				}
 			}
 
 			// update tree position pointer
-			period.txTreePosition[i] = period.txTreePosition[i] + 1
-			if period.txTreePosition[i] >= size {
+			period.txTreePosition[level] = period.txTreePosition[level] + 1
+			if period.txTreePosition[level] >= levelSize {
 				// reset position, start from 0
-				period.txTreePosition[i] = 0
+				period.txTreePosition[level] = 0
 			}
 
+			// reset for next node on tree level
 			counter.Reset()
-			period.periodSizeCounter[i] = 0
+			period.periodSizeCounter[level] = 0
 		}
 	}
 }
 
 // GetTx returns for each period the counters' TSProfileMetric matrix
 func (period *Period) GetTx() models.PeriodTree {
-	period.txTree.Root.TxMatrix = period.overallCounter.GetTx()
 	return period.txTree
-}
-
-// GetStats returns the first period's counter statistics
-func (period *Period) GetStats() map[string]models.TSStats {
-	// take period's overall counter
-	return period.overallCounter.GetStats()
-}
-
-// GetState returns the last discretized state
-func (period *Period) GetState() []models.TSState {
-	return period.lastStates
 }
 
 // GetCurrentPeriodPath returns the current tree positions
