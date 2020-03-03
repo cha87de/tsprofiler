@@ -16,6 +16,7 @@ import (
 var options struct {
 	Steps       int                      `long:"steps" default:"40"`
 	Mode        predictor.PredictionMode `long:"mode" default:"0"`
+	PeriodDepth int                      `long:"periodDepth" default:"0"`
 	Profilefile string                   `long:"profile" short:"p"`
 	Historyfile string                   `long:"history" short:"h"`
 	Task        string
@@ -27,16 +28,24 @@ func main() {
 	profile := utils.ReadProfileFromFile(options.Profilefile)
 	history := models.ReadHistoryFromFile(options.Historyfile)
 
+	var err error
+
 	switch options.Task {
 	case "simulate":
 		simulate := task.NewSimulate(profile, options.Mode, history)
-		simulate.Run(options.Steps)
+		err = simulate.Run(options.Steps, options.PeriodDepth)
 		simulate.Print()
 	case "likeliness":
 		fmt.Printf("likeliness not implemented yet")
 	default:
 		fmt.Printf("task %s unknown. Select \"simulate\" or \"likeliness\" as task.", options.Task)
 	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err)
+		os.Exit(1)
+	}
+	os.Exit(0)
 }
 
 func initializeFlags() {

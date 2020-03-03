@@ -1,7 +1,6 @@
 package phase
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/cha87de/tsprofiler/api"
@@ -59,18 +58,18 @@ func (phase *Phase) Count(tsstates []models.TSState) {
 	phase.access.Lock()
 	defer phase.access.Unlock()
 
-	fmt.Printf("history: ")
+	/*fmt.Printf("history: ")
 	for _, n := range phase.phaseTSStatesHistory {
 		for _, k := range n {
 			fmt.Printf("%d", k.State.Value)
 		}
 		fmt.Printf(" ")
 	}
-	fmt.Printf("\n")
+	fmt.Printf("\n")*/
 
 	likeliness := phase.phaseCounters[phase.phasePointer].Likeliness(tsstates)
 	counts := phase.phaseCounters[phase.phasePointer].Totalcounts()
-	fmt.Printf("likeliness: %.2f, counts: %d\n", likeliness, counts)
+	//fmt.Printf("likeliness: %.2f, counts: %d\n", likeliness, counts)
 	if likeliness < phase.phaseThresholdLikeliness && counts > phase.phaseThresholdCounts {
 		// if likeliness is below threshold, look for better matching phase
 		//fmt.Printf("likeliness: %.2f, counts: %d\n", likeliness, counts)
@@ -102,12 +101,12 @@ func (phase *Phase) Count(tsstates []models.TSState) {
 					nextState = tsstates
 				}
 				l := models.TxLikeliness(txMatrices, [][]models.TSState{historyStep}, nextState)
-				fmt.Printf("history step likeliness: %.2f\n", l)
+				//fmt.Printf("history step likeliness: %.2f\n", l)
 				lSum += l
 			}
 			phaseLikeliness = lSum / float32(len(history))
 
-			fmt.Printf("phase %d likeliness: %.2f\n", i, phaseLikeliness)
+			//fmt.Printf("phase %d likeliness: %.2f\n", i, phaseLikeliness)
 			if likeliness < phaseLikeliness && phaseLikeliness > phase.phaseThresholdLikeliness {
 				newPhasePointer = i
 				likeliness = phaseLikeliness
@@ -116,13 +115,13 @@ func (phase *Phase) Count(tsstates []models.TSState) {
 		}
 		if newPhasePointer != -1 {
 			// found a phase!
-			fmt.Printf("found matching phase %d\n", newPhasePointer)
+			//fmt.Printf("found matching phase %d\n", newPhasePointer)
 			phase.phasePointer = newPhasePointer
 		}
 
 		// create a new phase
 		if newPhasePointer == -1 {
-			fmt.Printf("create new phase\n")
+			//fmt.Printf("create new phase\n")
 			phase.phaseCounters = append(phase.phaseCounters, counter.NewCounter(phase.history, phase.states, phase.buffersize, phase.profiler))
 			phase.phasePointer = len(phase.phaseCounters) - 1 // point to the newly added
 		}

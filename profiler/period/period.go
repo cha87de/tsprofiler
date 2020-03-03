@@ -70,50 +70,59 @@ func (period *Period) Count(tsstates []models.TSState) {
 }
 
 func (period *Period) countPeriodTree(tsstates []models.TSState) {
+	period.countPeriodTreeNode(tsstates, 0)
+}
 
-	// count for each level in period tree
-	for level, levelSize := range period.periodSize {
-		counter := period.periodCounters[level]
-		counter.Count(tsstates)
-		period.periodSizeCounter[level]++
+func (period *Period) countPeriodTreeNode(tsstates []models.TSState, level int) bool {
 
-		if period.periodSizeCounter[level] >= levelSize {
-			tx := counter.GetTx()
-			/*
-				counter on current period level is full!
+	// count for current level
+	period.periodCounters[level].Count(tsstates)
+	period.periodSizeCounter[level]++
 
-				- if no copy present, copy TSProfileMetric to this period txPerPeriod[i]
-				- if copy is present, check how it differs from the current counter.GetTx()
-				- if differs a lot, alert (if the copy is considered as stable)
-				- if it differs a bit or copy is not stable, merge current tx with copy
-			*/
+	// handle tree
+	moveOn := false
+	nextLevel := level + 1
+	if nextLevel < len(period.periodSize) {
+		// go down into tree
+		nextLevel := level + 1
+		moveOn = period.countPeriodTreeNode(tsstates, nextLevel)
+	} else {
+		// at leaf node level already
+		moveOn = (period.periodSizeCounter[level] >= period.periodSize[level])
+	}
 
-			x := period.txTreePosition
-			treePos := x[:len(period.txTreePosition)-level]
-			node := period.txTree.GetNode(treePos)
-
-			// if tx lengths unequal, overwrite
-			if len(node.TxMatrix) != len(tx) {
-				node.TxMatrix = tx
-			} else {
-				// merge for each metric separately
-				for m := range tx {
-					node.TxMatrix[m].Merge(tx[m])
-				}
-			}
-
-			// update tree position pointer
-			period.txTreePosition[level] = period.txTreePosition[level] + 1
-			if period.txTreePosition[level] >= levelSize {
-				// reset position, start from 0
-				period.txTreePosition[level] = 0
-			}
-
-			// reset for next node on tree level
-			counter.Reset()
-			period.periodSizeCounter[level] = 0
+	// always update tx
+	tx := period.periodCounters[level].GetTx()
+	treePos := period.txTreePosition[:len(period.txTreePosition)-level]
+	node := period.txTree.GetNode(treePos)
+	// if tx lengths unequal, overwrite
+	if len(node.TxMatrix) != len(tx) {
+		node.TxMatrix = tx
+	} else {
+		// merge for each metric separately
+		for m := range tx {
+			node.TxMatrix[m].Merge(tx[m])
+			// TODO merge stats
 		}
 	}
+
+	// check if running out of level
+	moveOnUpperLevel := false
+	if moveOn {
+		// time to move on ... is the current level full?
+		period.txTreePosition[level] = period.txTreePosition[level] + 1
+		if period.txTreePosition[level] >= period.periodSize[level] {
+			// reset position, start from 0  for current level
+			period.txTreePosition[level] = 0
+			moveOnUpperLevel = true
+		}
+
+		// reset for next node on tree level
+		period.periodCounters[level].Reset()
+		period.periodSizeCounter[level] = 0
+	}
+
+	return moveOnUpperLevel
 }
 
 // GetTx returns for each period the counters' TSProfileMetric matrix

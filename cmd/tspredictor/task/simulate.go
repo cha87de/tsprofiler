@@ -27,7 +27,7 @@ func NewSimulate(profile models.TSProfile, mode predictor.PredictionMode, histor
 }
 
 // Run simulates given amount of steps
-func (simulate *Simulate) Run(steps int) {
+func (simulate *Simulate) Run(steps int, periodDepth int) error {
 	predictor := predictor.NewPredictor(simulate.profile)
 	predictor.SetMode(simulate.mode)
 	// set last state
@@ -36,8 +36,13 @@ func (simulate *Simulate) Run(steps int) {
 	// set phase
 	predictor.SetPhase(simulate.history.CurrentPhase)
 	// set period path
-	predictor.SetPeriodPath(simulate.history.PeriodPath, simulate.history.PeriodPathDepth)
-	simulate.simulation = predictor.Simulate(steps)
+	predictor.SetPeriodPath(simulate.history.PeriodPath, periodDepth)
+	var err error
+	simulate.simulation, err = predictor.Simulate(steps)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Print prints the simulation results to stdout

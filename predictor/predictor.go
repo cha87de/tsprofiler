@@ -10,9 +10,9 @@ import (
 // NewPredictor returns a new predictor for the given TSProfile
 func NewPredictor(profile models.TSProfile) *Predictor {
 	predictor := Predictor{
-		profile:      profile,
-		mode:         PredictionModeRootTx,
-		currentPhase: 0,
+		profile:           profile,
+		currentPhase:      0,
+		periodSizeCounter: make([]int, len(profile.Settings.PeriodSize)),
 	}
 	predictor.initializeState()
 	return &predictor
@@ -20,12 +20,16 @@ func NewPredictor(profile models.TSProfile) *Predictor {
 
 // Predictor offers prediction of the TSProfile the predictor is bound to
 type Predictor struct {
-	profile         models.TSProfile
-	currentState    map[string]string
-	currentPhase    int
-	periodPath      []int
-	periodPathDepth int
-	mode            PredictionMode
+	profile models.TSProfile
+
+	currentState map[string]string
+	currentPhase int
+
+	periodPath        []int
+	periodPathDepth   int
+	periodSizeCounter []int
+
+	mode PredictionMode
 }
 
 type nextState struct {
@@ -35,7 +39,7 @@ type nextState struct {
 }
 
 // NextState simulates next states for each metric using a random variable and the TSProfile's probabilities
-func (predictor *Predictor) nextState() map[string]nextState {
+func (predictor *Predictor) nextState() (map[string]nextState, error) {
 	states := make(map[string]nextState)
 	var txmatrices []models.TxMatrix
 
@@ -46,9 +50,8 @@ func (predictor *Predictor) nextState() map[string]nextState {
 		predictor.nextPhase()
 		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
 	} else if predictor.mode == PredictionModePeriods {
-		fmt.Printf("todo period mode")
-		//predictor.nextPeriodStep()
-		//txmatrices = predictor.profile.PeriodTree.
+		predictor.nextPeriod(0)
+		txmatrices = predictor.getCurrentPeriodTxMatrix()
 	} else {
 		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
 		// fallback: root tx
@@ -67,8 +70,13 @@ func (predictor *Predictor) nextState() map[string]nextState {
 		// find stateHistory in txmatrix
 		txstep, err := findStateHistoryInTxMatrix(txmatrix, stateHistory)
 		if err != nil {
-			fmt.Printf("%s (phase %d, txmatrix %+v)\n", err, predictor.currentPhase, txmatrix)
-			continue
+			//return nil, fmt.Errorf("error: %s (phase %d, periodPath %+v, txmatrix %+v)", err, predictor.currentPhase, predictor.periodPath, txmatrix)
+			// plan b: take next step with highest stepProb
+			//fmt.Printf("planb...\n")
+			txstep, err = findStateByStateProbInTxmatrix(txmatrix)
+			if err != nil {
+				return nil, fmt.Errorf("error: %s (phase %d, periodPath %+v, txmatrix %+v)", err, predictor.currentPhase, predictor.periodPath, txmatrix)
+			}
 		}
 
 		// weighted random variable to define next state on txsteps
@@ -85,13 +93,17 @@ func (predictor *Predictor) nextState() map[string]nextState {
 		}
 	}
 
-	return states
+	return states, nil
 }
 
 func (predictor *Predictor) nextPhase() {
 	currentPhase := predictor.currentPhase
 	txmatrix := predictor.profile.Phases.Tx
 	txstep, err := findStateHistoryInTxMatrix(txmatrix, fmt.Sprintf("%d", currentPhase))
+	if err != nil {
+		fmt.Printf("phase change error: %s\n", err)
+		return
+	}
 	next, err := computeNextState(txstep.NextStateProbs)
 	if err != nil {
 		fmt.Printf("phase change error: %s\n", err)
@@ -106,19 +118,53 @@ func (predictor *Predictor) nextPhase() {
 	}
 }
 
-func (predictor *Predictor) nextPeriod() {
+func (predictor *Predictor) getCurrentPeriodTxMatrix() []models.TxMatrix {
+	// select txmatrix according to periodPath and periodPathDepth
+	if len(predictor.periodPath)-predictor.periodPathDepth < 0 {
+		fmt.Printf("Warning: periodPathDepth too long for PeriodPath! Resizing to periodPathDepth %d\n", len(predictor.periodPath))
+		predictor.periodPathDepth = len(predictor.periodPath)
+	}
+	path := predictor.periodPath[len(predictor.periodPath)-predictor.periodPathDepth : len(predictor.periodPath)]
+	node := predictor.profile.PeriodTree.GetNode(path)
+	return node.TxMatrix
+}
+
+func (predictor *Predictor) nextPeriod(level int) bool {
 	if len(predictor.periodPath) > predictor.periodPathDepth {
 		fmt.Printf("periodDepth is larger than periodPath! Impossible!")
-		return
+		return false
 	}
-	for i := 0; i < predictor.periodPathDepth; i++ {
-		predictor.periodPath[i]++
-		node := predictor.profile.PeriodTree.GetNode(predictor.periodPath[:i+1])
-		if predictor.periodPath[i] >= node.MaxChilds {
-			// move on!
 
-		}
+	moveOn := false
+	nextLevel := level + 1
+	if nextLevel < len(predictor.profile.Settings.PeriodSize) {
+		// go down into tree
+		nextLevel := level + 1
+		moveOn = predictor.nextPeriod(nextLevel)
+	} else {
+		// at leaf node level already
+		moveOn = (predictor.periodSizeCounter[level] >= predictor.profile.Settings.PeriodSize[level])
 	}
+
+	// check if running out of level
+	moveOnUpperLevel := false
+	if moveOn {
+		predictor.periodPath[level] = predictor.periodPath[level] + 1
+		if predictor.periodPath[level] >= predictor.profile.Settings.PeriodSize[level] {
+			// reset position, start from 0  for current level
+			predictor.periodPath[level] = 0
+			moveOnUpperLevel = true
+		}
+
+		// reset for next node on tree level
+		predictor.periodSizeCounter[level] = 0
+	}
+
+	// count for current level
+	predictor.periodSizeCounter[level]++
+
+	return moveOnUpperLevel
+
 }
 
 // SetState defines the given currentState for the next simulation
@@ -143,11 +189,13 @@ func (predictor *Predictor) SetMode(mode PredictionMode) {
 }
 
 // Simulate computes `steps` states using randomness and TSProfile's probabilities
-func (predictor *Predictor) Simulate(steps int) [][]models.TSState {
+func (predictor *Predictor) Simulate(steps int) ([][]models.TSState, error) {
 	simulation := make([][]models.TSState, steps)
-	// fmt.Printf("start simulation with state %s\n", currentState)
 	for i := 0; i < steps; i++ {
-		next := predictor.nextState()
+		next, err := predictor.nextState()
+		if err != nil {
+			return nil, err
+		}
 		j := 0
 		simulation[i] = make([]models.TSState, len(next))
 		nextStateHistory := make(map[string]string)
@@ -169,15 +217,18 @@ func (predictor *Predictor) Simulate(steps int) [][]models.TSState {
 		}
 		predictor.appendState(nextStateHistory)
 	}
-	return simulation
+	return simulation, nil
 }
 
 // SimulateSteps computes `steps` states using randomness and TSProfile's probabilities
-func (predictor *Predictor) SimulateSteps(steps int) [][]models.TSState {
+func (predictor *Predictor) SimulateSteps(steps int) ([][]models.TSState, error) {
 	simulation := make([][]models.TSState, steps)
 	// fmt.Printf("start simulation with state %s\n", currentState)
 	for i := 0; i < steps; i++ {
-		next := predictor.nextState()
+		next, err := predictor.nextState()
+		if err != nil {
+			return nil, err
+		}
 		j := 0
 		simulation[i] = make([]models.TSState, len(next))
 		nextStateHistory := make(map[string]string)
@@ -199,25 +250,24 @@ func (predictor *Predictor) SimulateSteps(steps int) [][]models.TSState {
 		}
 		predictor.appendState(nextStateHistory)
 	}
-	return simulation
+	return simulation, nil
 }
 
 func (predictor *Predictor) initializeState() {
-	currentState := make(map[string]string)
-
 	var txmatrices []models.TxMatrix
 	if predictor.mode == PredictionModeRootTx {
 		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
 	} else if predictor.mode == PredictionModePhases {
 		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
 	} else if predictor.mode == PredictionModePeriods {
-		// TODO
-		fmt.Printf("TODO initialize State for Periods")
+		txmatrices = predictor.getCurrentPeriodTxMatrix()
 	} else {
 		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
 		// fallback: root tx
 		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
 	}
+
+	currentState := make(map[string]string)
 	for _, tx := range txmatrices {
 		if _, exists := currentState[tx.Metric]; !exists {
 			// find state with highest probability

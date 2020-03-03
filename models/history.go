@@ -9,11 +9,10 @@ import (
 
 // History defines the historic path and next step for tspredictor
 type History struct {
-	CurrentPhase    int                 `json:"currentPhase"`
-	HistoricStates  []map[string]string `json:"historicStates"`
-	PeriodPath      []int               `json:"periodPath"`
-	PeriodPathDepth int                 `json:"periodPathDepth"`
-	NextState       map[string]string   `json:"nextState"`
+	CurrentPhase   int                 `json:"currentPhase"`
+	HistoricStates []map[string]string `json:"historicStates"`
+	PeriodPath     []int               `json:"periodPath"`
+	NextState      map[string]string   `json:"nextState"`
 }
 
 // ReadHistoryFromFile reads History from json file and returns as object
