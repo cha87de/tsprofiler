@@ -70,7 +70,10 @@ func (period *Period) Count(tsstates []models.TSState) {
 }
 
 func (period *Period) countPeriodTree(tsstates []models.TSState) {
-	period.countPeriodTreeNode(tsstates, 0)
+	if len(period.periodSize) > 0 {
+		// only count period when configured
+		period.countPeriodTreeNode(tsstates, 0)
+	}
 }
 
 func (period *Period) countPeriodTreeNode(tsstates []models.TSState, level int) bool {
@@ -84,7 +87,6 @@ func (period *Period) countPeriodTreeNode(tsstates []models.TSState, level int) 
 	nextLevel := level + 1
 	if nextLevel < len(period.periodSize) {
 		// go down into tree
-		nextLevel := level + 1
 		moveOn = period.countPeriodTreeNode(tsstates, nextLevel)
 	} else {
 		// at leaf node level already
