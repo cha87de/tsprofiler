@@ -36,7 +36,8 @@ func main() {
 		err = simulate.Run(options.Steps, options.PeriodDepth)
 		simulate.Print()
 	case "likeliness":
-		fmt.Printf("likeliness not implemented yet")
+		likeliness := task.NewLikeliness(profile, options.Mode, history)
+		likeliness.Run(options.PeriodDepth)
 	default:
 		fmt.Printf("task %s unknown. Select \"simulate\" or \"likeliness\" as task.", options.Task)
 	}

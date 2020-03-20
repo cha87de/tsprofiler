@@ -220,39 +220,6 @@ func (predictor *Predictor) Simulate(steps int) ([][]models.TSState, error) {
 	return simulation, nil
 }
 
-// SimulateSteps computes `steps` states using randomness and TSProfile's probabilities
-func (predictor *Predictor) SimulateSteps(steps int) ([][]models.TSState, error) {
-	simulation := make([][]models.TSState, steps)
-	// fmt.Printf("start simulation with state %s\n", currentState)
-	for i := 0; i < steps; i++ {
-		next, err := predictor.nextState()
-		if err != nil {
-			return nil, err
-		}
-		j := 0
-		simulation[i] = make([]models.TSState, len(next))
-		nextStateHistory := make(map[string]string)
-		for metric, state := range next {
-			// compute value from state
-			simValue := int64(state.state)
-
-			// pack value to array
-			simulation[i][j] = models.TSState{
-				Metric: metric,
-				State: models.State{
-					Value: simValue,
-				},
-			}
-			j++
-
-			// store next metric state for history
-			nextStateHistory[metric] = fmt.Sprintf("%d", state.state)
-		}
-		predictor.appendState(nextStateHistory)
-	}
-	return simulation, nil
-}
-
 func (predictor *Predictor) initializeState() {
 	var txmatrices []models.TxMatrix
 	if predictor.mode == PredictionModeRootTx {
