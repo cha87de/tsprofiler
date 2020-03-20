@@ -1,5 +1,9 @@
 package models
 
+import (
+	"math/rand"
+)
+
 // NewPeriodTreeNode instantiates and returns a PeriodTreeNode with `size` children (recursively)
 func NewPeriodTreeNode(size []int) PeriodTreeNode {
 	maxChilds := 0
@@ -14,6 +18,7 @@ func NewPeriodTreeNode(size []int) PeriodTreeNode {
 		}
 	}
 	return PeriodTreeNode{
+		UUID:      rand.Intn(999),
 		MaxChilds: maxChilds,
 		Children:  children,
 		TxMatrix:  make([]TxMatrix, 0),
@@ -22,6 +27,7 @@ func NewPeriodTreeNode(size []int) PeriodTreeNode {
 
 // PeriodTreeNode describes a node holding a TxMatrix and (if not leaf node) children
 type PeriodTreeNode struct {
+	UUID      int
 	MaxChilds int              `json:"maxChilds"`
 	Children  []PeriodTreeNode `json:"children"`
 	TxMatrix  []TxMatrix       `json:"txmatrix"`

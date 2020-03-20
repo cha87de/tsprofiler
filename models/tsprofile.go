@@ -3,6 +3,7 @@ package models
 // TSProfile contains the resulting statistical profile
 type TSProfile struct {
 	Name       string     `json:"name"`
+	RootTx     []TxMatrix `json:"roottx"`
 	PeriodTree PeriodTree `json:"periodTree"`
 	Phases     Phases     `json:"phases"`
 	Settings   Settings   `json:"settings"`

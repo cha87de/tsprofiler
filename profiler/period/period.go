@@ -1,11 +1,14 @@
 package period
 
 import (
+	"fmt"
+	"math"
 	"sync"
 
 	"github.com/cha87de/tsprofiler/api"
 	"github.com/cha87de/tsprofiler/models"
 	"github.com/cha87de/tsprofiler/profiler/counter"
+	"gonum.org/v1/gonum/stat"
 )
 
 // NewPeriod initializes and returns a new Period
@@ -72,15 +75,12 @@ func (period *Period) Count(tsstates []models.TSState) {
 func (period *Period) countPeriodTree(tsstates []models.TSState) {
 	if len(period.periodSize) > 0 {
 		// only count period when configured
+		//fmt.Printf("txTreePos: %+v\n", period.txTreePosition)
 		period.countPeriodTreeNode(tsstates, 0)
 	}
 }
 
 func (period *Period) countPeriodTreeNode(tsstates []models.TSState, level int) bool {
-
-	// count for current level
-	period.periodCounters[level].Count(tsstates)
-	period.periodSizeCounter[level]++
 
 	// handle tree
 	moveOn := false
@@ -90,27 +90,69 @@ func (period *Period) countPeriodTreeNode(tsstates []models.TSState, level int) 
 		moveOn = period.countPeriodTreeNode(tsstates, nextLevel)
 	} else {
 		// at leaf node level already
-		moveOn = (period.periodSizeCounter[level] >= period.periodSize[level])
+		// caution: periodSize starts at 1, counter starts at 0!!
+		moveOn = (period.periodSizeCounter[level] >= period.periodSize[level]-1)
 	}
 
-	// always update tx
+	// count for current level
+	period.periodCounters[level].Count(tsstates)
+	period.periodSizeCounter[level]++
+
+	// update tx
 	tx := period.periodCounters[level].GetTx()
 	treePos := period.txTreePosition[:len(period.txTreePosition)-level]
-	node := period.txTree.GetNode(treePos)
+	fmt.Printf("treePos: %+v ", treePos)
+	var txMatrix []models.TxMatrix
+	if level == len(period.periodSize)-1 {
+		// take rootTx
+		txMatrix = period.txTree.Root.TxMatrix
+		fmt.Printf("take rootTx\n")
+	} else {
+		// take children
+		//treePos = treePos[:len(period.txTreePosition)-1]
+		node := period.txTree.Root.GetNode(treePos)
+		txMatrix = node.TxMatrix
+		fmt.Printf("received node %d\n", node.UUID)
+	}
+
 	// if tx lengths unequal, overwrite
-	if len(node.TxMatrix) != len(tx) {
-		node.TxMatrix = tx
+	if len(txMatrix) != len(tx) {
+		txMatrix = tx
 	} else {
 		// merge for each metric separately
 		for m := range tx {
-			node.TxMatrix[m].Merge(tx[m])
-			// TODO merge stats
+			txMatrix[m].Merge(tx[m])
+			// merge stats
+			txMatrix[m].Stats.Count += tx[m].Stats.Count
+			if txMatrix[m].Stats.Min > tx[m].Stats.Min {
+				txMatrix[m].Stats.Min = tx[m].Stats.Min
+			}
+			if txMatrix[m].Stats.Max < tx[m].Stats.Max {
+				txMatrix[m].Stats.Max = tx[m].Stats.Max
+			}
+			// avg
+			mergedAvg := stat.Mean(
+				[]float64{txMatrix[m].Stats.Avg, tx[m].Stats.Avg},
+				[]float64{float64(txMatrix[m].Stats.Count), float64(tx[m].Stats.Count)},
+			)
+			txMatrix[m].Stats.Avg = mergedAvg
+			// stddev
+			txMatrix[m].Stats.StddevSum += tx[m].Stats.StddevSum
+			txMatrix[m].Stats.Stddev = math.Sqrt(txMatrix[m].Stats.StddevSum / float64(txMatrix[m].Stats.Count))
 		}
+	}
+	if level == len(period.periodSize)-1 {
+		period.txTree.Root.TxMatrix = txMatrix
+	} else {
+		node := period.txTree.Root.GetNode(treePos)
+		node.TxMatrix = txMatrix
 	}
 
 	// check if running out of level
 	moveOnUpperLevel := false
 	if moveOn {
+		//fmt.Printf("moveOn level %d\n", level)
+
 		// time to move on ... is the current level full?
 		period.txTreePosition[level] = period.txTreePosition[level] + 1
 		if period.txTreePosition[level] >= period.periodSize[level] {
@@ -120,7 +162,8 @@ func (period *Period) countPeriodTreeNode(tsstates []models.TSState, level int) 
 		}
 
 		// reset for next node on tree level
-		period.periodCounters[level].Reset()
+		period.periodCounters[level].ResetCounters()
+		period.periodCounters[level].ResetStats()
 		period.periodSizeCounter[level] = 0
 	}
 
