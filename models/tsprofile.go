@@ -14,7 +14,7 @@ func (profile *TSProfile) Likeliness(oldstates [][]TSState, newstate []TSState) 
 	likelinessSum := float32(0)
 	likelinessCount := 0
 
-	metricPhases := profile.PeriodTree.Root.TxMatrix
+	metricPhases := profile.RootTx
 	for _, phaseTx := range metricPhases {
 
 		fromStates := make([]TSState, 0)

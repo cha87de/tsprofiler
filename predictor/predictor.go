@@ -46,6 +46,7 @@ func (predictor *Predictor) nextState() (map[string]nextState, error) {
 	// define which matrices to be used (default: root matrix)
 	if predictor.mode == PredictionModeRootTx {
 		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
+		txmatrices = predictor.profile.RootTx
 	} else if predictor.mode == PredictionModePhases {
 		predictor.nextPhase()
 		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
@@ -55,7 +56,7 @@ func (predictor *Predictor) nextState() (map[string]nextState, error) {
 	} else {
 		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
 		// fallback: root tx
-		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
+		txmatrices = predictor.profile.RootTx
 	}
 
 	// for each metric
@@ -223,7 +224,7 @@ func (predictor *Predictor) Simulate(steps int) ([][]models.TSState, error) {
 func (predictor *Predictor) initializeState() {
 	var txmatrices []models.TxMatrix
 	if predictor.mode == PredictionModeRootTx {
-		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
+		txmatrices = predictor.profile.RootTx
 	} else if predictor.mode == PredictionModePhases {
 		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
 	} else if predictor.mode == PredictionModePeriods {
@@ -231,7 +232,7 @@ func (predictor *Predictor) initializeState() {
 	} else {
 		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
 		// fallback: root tx
-		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
+		txmatrices = predictor.profile.RootTx
 	}
 
 	currentState := make(map[string]string)
