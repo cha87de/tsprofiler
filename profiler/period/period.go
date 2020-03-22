@@ -2,11 +2,13 @@ package period
 
 import (
 	"fmt"
+	"math"
 	"sync"
 
 	"github.com/cha87de/tsprofiler/api"
 	"github.com/cha87de/tsprofiler/models"
 	"github.com/cha87de/tsprofiler/profiler/counter"
+	"gonum.org/v1/gonum/stat"
 )
 
 // NewPeriod initializes and returns a new Period
@@ -147,28 +149,30 @@ func (period *Period) countPeriodTreeNodeLevel(tsstates []models.TSState, level 
 	if len(txMatrix) != len(tx) {
 		txMatrix = tx
 	} else {
-		/*
-			// merge for each metric separately
-			for m := range tx {
-				txMatrix[m].Merge(tx[m])
-				// merge stats
-				txMatrix[m].Stats.Count++
-				if txMatrix[m].Stats.Min > tx[m].Stats.Min {
-					txMatrix[m].Stats.Min = tx[m].Stats.Min
-				}
-				if txMatrix[m].Stats.Max < tx[m].Stats.Max {
-					txMatrix[m].Stats.Max = tx[m].Stats.Max
-				}
-				// avg
-				mergedAvg := stat.Mean(
-					[]float64{txMatrix[m].Stats.Avg, tx[m].Stats.Avg},
-					[]float64{float64(txMatrix[m].Stats.Count), float64(tx[m].Stats.Count)},
-				)
-				txMatrix[m].Stats.Avg = mergedAvg
-				// stddev
-				txMatrix[m].Stats.StddevSum += tx[m].Stats.StddevSum
-				txMatrix[m].Stats.Stddev = math.Sqrt(txMatrix[m].Stats.StddevSum / float64(txMatrix[m].Stats.Count))
-			}*/
+
+		// TODO when rows 110 and 124 fixed, remove merging!
+
+		// merge for each metric separately
+		for m := range tx {
+			txMatrix[m].Merge(tx[m])
+			// merge stats
+			txMatrix[m].Stats.Count++
+			if txMatrix[m].Stats.Min > tx[m].Stats.Min {
+				txMatrix[m].Stats.Min = tx[m].Stats.Min
+			}
+			if txMatrix[m].Stats.Max < tx[m].Stats.Max {
+				txMatrix[m].Stats.Max = tx[m].Stats.Max
+			}
+			// avg
+			mergedAvg := stat.Mean(
+				[]float64{txMatrix[m].Stats.Avg, tx[m].Stats.Avg},
+				[]float64{float64(txMatrix[m].Stats.Count), float64(tx[m].Stats.Count)},
+			)
+			txMatrix[m].Stats.Avg = mergedAvg
+			// stddev
+			txMatrix[m].Stats.StddevSum += tx[m].Stats.StddevSum
+			txMatrix[m].Stats.Stddev = math.Sqrt(txMatrix[m].Stats.StddevSum / float64(txMatrix[m].Stats.Count))
+		}
 	}
 	node.TxMatrix = txMatrix
 }
