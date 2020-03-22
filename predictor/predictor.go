@@ -127,47 +127,36 @@ func (predictor *Predictor) getCurrentPeriodTxMatrix() []models.TxMatrix {
 	}
 
 	path := predictor.periodPath[:predictor.periodPathDepth]
-	fmt.Printf("path: %+v\n", path)
+	//fmt.Printf("path: %+v\n", path)
 	node := predictor.profile.PeriodTree.GetNode(path)
 	return node.TxMatrix
 }
 
 func (predictor *Predictor) nextPeriod(level int) bool {
-	if len(predictor.periodPath) < predictor.periodPathDepth {
-		fmt.Printf("periodPathDepth %d is larger than periodPath %d (%+v)! Impossible!", predictor.periodPathDepth, len(predictor.periodPath), predictor.periodPath)
-		return false
-	}
-
-	moveOn := false
-	nextLevel := level + 1
-	if nextLevel < len(predictor.profile.Settings.PeriodSize) {
-		// go down into tree
-		nextLevel := level + 1
-		moveOn = predictor.nextPeriod(nextLevel)
-	} else {
-		// at leaf node level already
-		moveOn = (predictor.periodSizeCounter[level] >= predictor.profile.Settings.PeriodSize[level])
-	}
-
-	// check if running out of level
-	moveOnUpperLevel := false
-	if moveOn {
-		predictor.periodPath[level] = predictor.periodPath[level] + 1
-		if predictor.periodPath[level] >= predictor.profile.Settings.PeriodSize[level] {
-			// reset position, start from 0  for current level
-			predictor.periodPath[level] = 0
-			moveOnUpperLevel = true
+	// now walk through the tree
+	if level < len(predictor.periodPath)-1 {
+		// go deeper into tree
+		stepForward := predictor.nextPeriod(level + 1)
+		if stepForward {
+			// child level moved on
+			predictor.periodPath[level]++
+			if predictor.periodPath[level] >= predictor.profile.Settings.PeriodSize[level] {
+				// yes! rotate and start from 0
+				predictor.periodPath[level] = 0
+				return true
+			}
 		}
-
-		// reset for next node on tree level
-		predictor.periodSizeCounter[level] = 0
+	} else { // level >= len(predictor.periodPath) ==> leaf node
+		// we are on leaf level
+		predictor.periodSizeCounter[level]++
+		// can counter still be increased?
+		if predictor.periodSizeCounter[level] >= predictor.profile.Settings.PeriodSize[level] {
+			// no! move on! clear level
+			predictor.periodSizeCounter[level] = 0
+			return true
+		}
 	}
-
-	// count for current level
-	predictor.periodSizeCounter[level]++
-
-	return moveOnUpperLevel
-
+	return false
 }
 
 // SetState defines the given currentState for the next simulation
