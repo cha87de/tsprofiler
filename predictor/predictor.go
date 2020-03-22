@@ -125,14 +125,16 @@ func (predictor *Predictor) getCurrentPeriodTxMatrix() []models.TxMatrix {
 		fmt.Printf("Warning: periodPathDepth too long for PeriodPath! Resizing to periodPathDepth %d\n", len(predictor.periodPath))
 		predictor.periodPathDepth = len(predictor.periodPath)
 	}
-	path := predictor.periodPath[len(predictor.periodPath)-predictor.periodPathDepth : len(predictor.periodPath)]
+
+	path := predictor.periodPath[:predictor.periodPathDepth]
+	fmt.Printf("path: %+v\n", path)
 	node := predictor.profile.PeriodTree.GetNode(path)
 	return node.TxMatrix
 }
 
 func (predictor *Predictor) nextPeriod(level int) bool {
-	if len(predictor.periodPath) > predictor.periodPathDepth {
-		fmt.Printf("periodDepth is larger than periodPath! Impossible!")
+	if len(predictor.periodPath) < predictor.periodPathDepth {
+		fmt.Printf("periodPathDepth %d is larger than periodPath %d (%+v)! Impossible!", predictor.periodPathDepth, len(predictor.periodPath), predictor.periodPath)
 		return false
 	}
 
