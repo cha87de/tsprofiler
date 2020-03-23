@@ -1,7 +1,6 @@
 package period
 
 import (
-	"fmt"
 	"math"
 	"sync"
 
@@ -142,7 +141,7 @@ func (period *Period) countPeriodTreeNodeLevel(tsstates []models.TSState, level 
 	tx := period.periodCounters[level].GetTx()
 	treePos := period.txTreePosition[:level+1]
 	node := period.txTree.GetNode(treePos)
-	fmt.Printf("GetNode %+v (%d)\n", treePos, node.UUID)
+	//fmt.Printf("GetNode %+v (%d)\n", treePos, node.UUID)
 
 	txMatrix := node.TxMatrix
 	// if tx lengths unequal, overwrite (should never happen with proper input)

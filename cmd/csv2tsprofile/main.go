@@ -33,6 +33,7 @@ var options struct {
 	Outputfile  string `long:"output" default:"-" description:"path to write profile to, stdout if '-'"`
 	Historyfile string `long:"out.history" default:"" description:"path to write last historic values to, stdout if '-', empty to disable"`
 	PhasesFile  string `long:"out.phases" default:""`
+	PeriodsFile string `long:"out.periods" default:""`
 	StatesFile  string `long:"out.states" default:""`
 
 	Inputfile string
@@ -40,6 +41,7 @@ var options struct {
 
 var tsprofiler api.TSProfiler
 var phasesfile *os.File
+var periodsfile *os.File
 var statesfile *os.File
 
 func main() {
@@ -56,6 +58,14 @@ func main() {
 			log.Fatal(err)
 		}
 		defer phasesfile.Close()
+	}
+	if options.PeriodsFile != "" && options.PeriodsFile != "-" {
+		var err error
+		periodsfile, err = os.OpenFile(options.PeriodsFile, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer periodsfile.Close()
 	}
 	if options.StatesFile != "" && options.StatesFile != "-" {
 		var err error
@@ -191,6 +201,22 @@ func putMeasurement(utilValue []float64) {
 		// print to file
 		row := fmt.Sprintf("%d\n", phaseid)
 		if _, err := phasesfile.Write([]byte(row)); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// print periods
+	periodPath := strings.Trim(strings.Replace(fmt.Sprint(tsprofiler.GetCurrentPeriodPath()), " ", ",", -1), "[]")
+	if options.PeriodsFile == "-" {
+		// use stdout
+		row := fmt.Sprintf("%s\n", periodPath)
+		fmt.Print(row)
+	} else if options.PeriodsFile == "" {
+		// ignore
+	} else {
+		// print to file
+		row := fmt.Sprintf("%s\n", periodPath)
+		if _, err := periodsfile.Write([]byte(row)); err != nil {
 			log.Fatal(err)
 		}
 	}
