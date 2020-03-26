@@ -12,6 +12,7 @@ type PeriodTree struct {
 	Root PeriodTreeNode `json:"root"`
 }
 
+// GetNode returns the TreeNode which is located at `path`
 func (periodTree *PeriodTree) GetNode(path []int) *PeriodTreeNode {
 	return periodTree.Root.GetNode(path)
 }

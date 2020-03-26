@@ -7,5 +7,5 @@ type TSStats struct {
 	Stddev    float64 `json:"stddev"`
 	Avg       float64 `json:"avg"`
 	Count     int64   `json:"count"`
-	StddevSum float64 `json:"-"`
+	StddevSum float64 `json:"stddevsum"`
 }

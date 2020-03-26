@@ -105,3 +105,39 @@ func fromString(from []TSState) string {
 	}
 	return fromIndex
 }
+
+// TxLikeliness computes the likeliness that history happens on multivariate txMatrix
+func TxLikeliness(txMatrices []TxMatrix, history [][]TSState, nextState []TSState) float32 {
+	likelinessSum := float32(0)
+	likelinessCount := 0
+
+	for _, phaseTx := range txMatrices {
+
+		fromStates := make([]TSState, 0)
+		var toState TSState
+
+		// find from
+		for _, oldstateHistory := range history {
+			for _, s := range oldstateHistory {
+				if s.Metric == phaseTx.Metric {
+					fromStates = append(fromStates, s)
+					break
+				}
+			}
+		}
+
+		// find to
+		for _, s := range nextState {
+			if s.Metric == phaseTx.Metric {
+				toState = s
+				break
+			}
+		}
+
+		likeliness := phaseTx.Likeliness(fromStates, toState)
+		likelinessSum += likeliness
+		likelinessCount++
+	}
+
+	return likelinessSum / float32(likelinessCount)
+}

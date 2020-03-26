@@ -2,10 +2,8 @@ package main
 
 import (
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -18,24 +16,33 @@ import (
 )
 
 var options struct {
-	States                int     `long:"states" default:"4"`
-	BufferSize            int     `long:"buffersize" default:"10"`
-	History               int     `long:"history" default:"1"`
-	FilterStdDevs         int     `long:"filterstddevs" default:"2"`
-	FixedBound            bool    `long:"fixedbound"`
-	FixedMin              float64 `long:"fixedmin" default:"0" description:"if fixedbound is set, set the min value"`
-	FixedMax              float64 `long:"fixedmax" default:"100" description:"if fixedbound is set, set the max value"`
-	PeriodSize            string  `long:"periodsize" default:"" description:"comma separated list of ints, specifies descrete states per period"`
-	PeriodChangeRatio     float64 `long:"periodchangeratio" default:"0.2" description:"accepted ratio [0,1] for changes, alert if above"`
-	PhaseChangeLikeliness float32 `long:"phasechangelikeliness" default:"0.6"`
-	PhaseChangeMincount   int64   `long:"phasechangemincount" default:"60"`
-	Outputfile            string  `long:"output" default:"-" description:"path to write profile to, stdout if '-'"`
-	PhasesFile            string  `long:"out.phases" default:""`
-	Inputfile             string
+	States        int `long:"states" default:"4"`
+	BufferSize    int `long:"buffersize" default:"10"`
+	History       int `long:"history" default:"1"`
+	FilterStdDevs int `long:"filterstddevs" default:"2"`
+
+	FixedBound bool    `long:"fixedbound"`
+	FixedMin   float64 `long:"fixedmin" default:"0" description:"if fixedbound is set, set the min value"`
+	FixedMax   float64 `long:"fixedmax" default:"100" description:"if fixedbound is set, set the max value"`
+
+	PeriodSize string `long:"periodsize" default:"" description:"comma separated list of ints, specifies descrete states per period"`
+
+	PhaseChangeLikeliness float32 `long:"phasechangelikeliness" default:""`
+	PhaseChangeHistory    int64   `long:"phasechangehistory" default:"1"`
+
+	Outputfile  string `long:"output" default:"-" description:"path to write profile to, stdout if '-'"`
+	Historyfile string `long:"out.history" default:"" description:"path to write last historic values to, stdout if '-', empty to disable"`
+	PhasesFile  string `long:"out.phases" default:""`
+	PeriodsFile string `long:"out.periods" default:""`
+	StatesFile  string `long:"out.states" default:""`
+
+	Inputfile string
 }
 
 var tsprofiler api.TSProfiler
 var phasesfile *os.File
+var periodsfile *os.File
+var statesfile *os.File
 
 func main() {
 	initializeFlags()
@@ -46,18 +53,40 @@ func main() {
 	// create & open output file
 	if options.PhasesFile != "" && options.PhasesFile != "-" {
 		var err error
-		phasesfile, err = os.OpenFile(options.PhasesFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		phasesfile, err = os.OpenFile(options.PhasesFile, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer phasesfile.Close()
+	}
+	if options.PeriodsFile != "" && options.PeriodsFile != "-" {
+		var err error
+		periodsfile, err = os.OpenFile(options.PeriodsFile, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer periodsfile.Close()
+	}
+	if options.StatesFile != "" && options.StatesFile != "-" {
+		var err error
+		statesfile, err = os.OpenFile(options.StatesFile, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer statesfile.Close()
 	}
 
 	// read file line by line
 	readFile(options.Inputfile)
 
 	// get and print profile
-	profileOutput()
+	outputProfile()
+
+	// print last states and positions
+	if options.Historyfile != "" {
+		outputHistory()
+	}
+
 }
 
 func initializeFlags() {
@@ -111,7 +140,7 @@ func initProfiler() {
 		FixBound:              options.FixedBound,
 		PeriodSize:            periodSize,
 		PhaseChangeLikeliness: options.PhaseChangeLikeliness,
-		PhaseChangeMincount:   options.PhaseChangeMincount,
+		PhaseChangeHistory:    options.PhaseChangeHistory,
 	})
 }
 
@@ -160,41 +189,57 @@ func putMeasurement(utilValue []float64) {
 	}
 	tsprofiler.Put(tsinput)
 
-	//state := tsprofiler.GetCurrentState()
+	// print phases
 	phaseid := tsprofiler.GetCurrentPhase()
-	// handle phases output
-	row := fmt.Sprintf("%d\n", phaseid)
 	if options.PhasesFile == "-" {
 		// use stdout
+		row := fmt.Sprintf("%d\n", phaseid)
 		fmt.Print(row)
 	} else if options.PhasesFile == "" {
 		// ignore likeliness
 	} else {
 		// print to file
+		row := fmt.Sprintf("%d\n", phaseid)
 		if _, err := phasesfile.Write([]byte(row)); err != nil {
 			log.Fatal(err)
 		}
 	}
-}
 
-func profileOutput() {
-	profile := tsprofiler.Get()
-	json, err := json.Marshal(profile)
-	if err != nil {
-		fmt.Printf("cannot create json: %s (original: %+v)\n", err, profile)
-		return
-	}
-
-	if options.Outputfile == "-" {
-		// print to stdout
-		fmt.Printf("%s\n", json)
+	// print periods
+	periodPath := strings.Trim(strings.Replace(fmt.Sprint(tsprofiler.GetCurrentPeriodPath()), " ", ",", -1), "[]")
+	if options.PeriodsFile == "-" {
+		// use stdout
+		row := fmt.Sprintf("%s\n", periodPath)
+		fmt.Print(row)
+	} else if options.PeriodsFile == "" {
+		// ignore
 	} else {
-		// write to file
-		err := ioutil.WriteFile(options.Outputfile, json, 0644)
-		if err != nil {
-			fmt.Printf("cannot write json to file %s: %s\n", options.Outputfile, err)
-			return
+		// print to file
+		row := fmt.Sprintf("%s\n", periodPath)
+		if _, err := periodsfile.Write([]byte(row)); err != nil {
+			log.Fatal(err)
 		}
 	}
 
+	// print states
+	state := tsprofiler.GetCurrentState()
+	stateRow := ""
+	for _, s := range state {
+		if stateRow != "" {
+			stateRow = stateRow + " "
+		}
+		stateRow = fmt.Sprintf("%s%d", stateRow, s.State.Value)
+	}
+	stateRow = stateRow + "\n"
+	if options.StatesFile == "-" {
+		// use stdout
+		fmt.Print(stateRow)
+	} else if options.StatesFile == "" {
+		// ignore
+	} else {
+		// print to file
+		if _, err := statesfile.Write([]byte(stateRow)); err != nil {
+			log.Fatal(err)
+		}
+	}
 }

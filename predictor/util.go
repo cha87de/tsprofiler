@@ -44,6 +44,28 @@ func findStateHistoryInTxMatrix(txmatrix models.TxMatrix, stateHistory string) (
 	return txstep, nil
 }
 
+func findStateByStateProbInTxmatrix(txmatrix models.TxMatrix) (models.TXStep, error) {
+	// find state with highest probability
+	state := ""
+	stepProb := 0
+	for s, txstep := range txmatrix.Transitions {
+		if txstep.StepProb > stepProb {
+			state = s
+			stepProb = txstep.StepProb
+		}
+	}
+	if state == "" {
+		err := fmt.Errorf("failed to initialize state for metric %s", txmatrix.Metric)
+		return models.TXStep{}, err
+	}
+	// fint txmatrix for new state
+	step, err := findStateHistoryInTxMatrix(txmatrix, state)
+	if err != nil {
+		return models.TXStep{}, err
+	}
+	return step, nil
+}
+
 func computeNextState(nextStateProbs []int) (int, error) {
 	choices := make([]randutil.Choice, len(nextStateProbs))
 	for i, n := range nextStateProbs {

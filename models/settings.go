@@ -33,7 +33,8 @@ type Settings struct {
 	// PeriodSize defines the amount and size of periods
 	PeriodSize []int `json:"periodsize"`
 
-	// Phase Change Probs (at least Mincount items, then if below likeliness threshold)
+	// Phase Change Detection settings (likeliness over history)
 	PhaseChangeLikeliness float32 `json:"phaseChangeLikeliness"`
-	PhaseChangeMincount   int64   `json:"phaseChangeMincount"`
+	// Phase Change Detection settings (state history length)
+	PhaseChangeHistory int64 `json:"phaseChangeHistory"`
 }

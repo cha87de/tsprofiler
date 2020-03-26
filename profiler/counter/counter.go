@@ -218,11 +218,25 @@ func (counter *Counter) GetStats() map[string]models.TSStats {
 	return counter.stats
 }
 
-// Reset clears the counters
+// Reset clears the counters, state, and stats
 func (counter *Counter) Reset() {
 	counter.access.Lock()
 	defer counter.access.Unlock()
 	counter.currentState = make(map[string][]models.State)
 	counter.stateChangeCounters = make(map[string]map[string][]int64)
+	counter.stats = make(map[string]models.TSStats)
+}
+
+// ResetCounters clears the counters only
+func (counter *Counter) ResetCounters() {
+	counter.access.Lock()
+	defer counter.access.Unlock()
+	counter.stateChangeCounters = make(map[string]map[string][]int64)
+}
+
+// ResetStats clears the stats only
+func (counter *Counter) ResetStats() {
+	counter.access.Lock()
+	defer counter.access.Unlock()
 	counter.stats = make(map[string]models.TSStats)
 }

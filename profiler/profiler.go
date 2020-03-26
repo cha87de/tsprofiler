@@ -1,12 +1,15 @@
 package profiler
 
 import (
+	"sync"
 	"time"
 
 	"github.com/cha87de/tsprofiler/models"
 	"github.com/cha87de/tsprofiler/profiler/buffer"
+	"github.com/cha87de/tsprofiler/profiler/counter"
 	"github.com/cha87de/tsprofiler/profiler/discretizer"
 	"github.com/cha87de/tsprofiler/profiler/period"
+	"github.com/cha87de/tsprofiler/profiler/phase"
 )
 
 // NewProfiler creates and returns a new TSProfiler, configured with given Settings
@@ -22,10 +25,17 @@ type Profiler struct {
 	settings models.Settings
 	stopped  bool
 
+	// state
+	overallCounter counter.Counter
+	lastStates     []models.TSState
+
+	access *sync.Mutex
+
 	// sub components
 	buffer      buffer.Buffer
 	discretizer discretizer.Discretizer
 	period      period.Period
+	phase       phase.Phase
 }
 
 func (profiler *Profiler) initialize(settings models.Settings) {
@@ -36,7 +46,13 @@ func (profiler *Profiler) initialize(settings models.Settings) {
 	// initialize sub components
 	profiler.buffer = buffer.NewBuffer(settings.FilterStdDevs, profiler)
 	profiler.discretizer = discretizer.NewDiscretizer(settings.States, settings.FixBound, profiler)
-	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, settings.PhaseChangeLikeliness, settings.PhaseChangeMincount, profiler)
+	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, profiler)
+	profiler.phase = phase.NewPhase(settings.History, settings.States, settings.BufferSize, settings.PhaseChangeLikeliness, settings.PhaseChangeHistory, profiler)
+
+	// initialize root tx counter
+	profiler.overallCounter = counter.NewCounter(settings.History, settings.States, settings.BufferSize, profiler)
+	profiler.lastStates = make([]models.TSState, 0)
+	profiler.access = &sync.Mutex{}
 
 	// start input & output background routines
 	go profiler.outputRunner()
@@ -53,14 +69,24 @@ func (profiler *Profiler) Get() models.TSProfile {
 	return profiler.generateProfile()
 }
 
+// GetCurrentStats returns the current stats for each metric
+func (profiler *Profiler) GetCurrentStats() map[string]models.TSStats {
+	return profiler.overallCounter.GetStats()
+}
+
 // GetCurrentState returns the current state for each metric
-func (profiler *Profiler) GetCurrentState() map[string]models.TSStats {
-	return profiler.period.GetStats()
+func (profiler *Profiler) GetCurrentState() []models.TSState {
+	return profiler.lastStates
 }
 
 // GetCurrentPhase returns the current phase id
 func (profiler *Profiler) GetCurrentPhase() int {
-	return profiler.period.GetPhase()
+	return profiler.phase.GetPhase()
+}
+
+// GetCurrentPeriodPath returns the current period path
+func (profiler *Profiler) GetCurrentPeriodPath() []int {
+	return profiler.period.GetCurrentPeriodPath()
 }
 
 // Terminate stops and removes the profiler
@@ -82,8 +108,26 @@ func (profiler *Profiler) inputListener() {
 			// buffer is full, trigger discretizer!
 			tsbuffers := profiler.buffer.Reset()
 			tsstates := profiler.discretizer.Discretize(tsbuffers)
-			profiler.period.Count(tsstates)
+
+			profiler.access.Lock()
+
+			// global all time counting
+			profiler.overallCounter.Count(tsstates)
+
+			// update lastState
+			profiler.lastStates = tsstates
+
+			// call sub components
+			if len(profiler.settings.PeriodSize) > 0 {
+				profiler.period.Count(tsstates)
+			}
+			if profiler.settings.PhaseChangeLikeliness != float32(0) {
+				profiler.phase.Count(tsstates)
+			}
+
 			itemCount = 0
+
+			profiler.access.Unlock()
 		}
 	}
 }
@@ -106,9 +150,12 @@ func (profiler *Profiler) outputRunner() {
 // generateProfile collects the necessary data to return a TSProfile
 func (profiler *Profiler) generateProfile() models.TSProfile {
 	periodTree := profiler.period.GetTx()
-	phases := profiler.period.GetPhasesTx()
+	//periodTree.Root.TxMatrix = profiler.overallCounter.GetTx()
+	rootTx := profiler.overallCounter.GetTx()
+	phases := profiler.phase.GetPhasesTx()
 	return models.TSProfile{
 		Name:       profiler.settings.Name,
+		RootTx:     rootTx,
 		PeriodTree: periodTree,
 		Phases:     phases,
 		Settings:   profiler.settings,
