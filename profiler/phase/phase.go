@@ -1,7 +1,6 @@
 package phase
 
 import (
-	"fmt"
 	"math"
 	"sync"
 
@@ -126,12 +125,12 @@ func (phase *Phase) Count(tsstates []models.TSState) {
 		}
 		if newPhasePointer != -1 {
 			// found an existing, matching phase!
-			fmt.Printf("found better matching phase %d (%.3f)\n", newPhasePointer, historyLikeliness)
+			//fmt.Printf("found better matching phase %d (%.3f)\n", newPhasePointer, historyLikeliness)
 			phase.phasePointer = newPhasePointer
 		} else {
 			// create a new phase
 			phaseid := len(phase.phaseCounters) - 1
-			fmt.Printf("create new phase %d\n", phaseid)
+			//fmt.Printf("create new phase %d\n", phaseid)
 			phase.phaseCounters = append(phase.phaseCounters, counter.NewCounter(phase.history, phase.states, phase.buffersize, phase.profiler))
 			phase.phasePointer = phaseid // point to the newly added
 		}
