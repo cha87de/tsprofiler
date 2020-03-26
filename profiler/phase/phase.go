@@ -1,6 +1,8 @@
 package phase
 
 import (
+	"fmt"
+	"math"
 	"sync"
 
 	"github.com/cha87de/tsprofiler/api"
@@ -8,16 +10,16 @@ import (
 	"github.com/cha87de/tsprofiler/profiler/counter"
 )
 
-const maxPhaseHistory = 5
-
-func NewPhase(history int, states int, buffersize int, phaseLikeliness float32, phaseMin int64, profiler api.TSProfiler) Phase {
+// NewPhase instantiates and returns a new Phase with the provided parameters
+func NewPhase(history int, states int, buffersize int, phaseLikeliness float32, phaseHistory int64, profiler api.TSProfiler) Phase {
 	phase := Phase{
 		profiler: profiler,
 
-		phaseCounters:        make([]counter.Counter, 1),
-		phasePointer:         0,
-		phaseTxCounter:       counter.NewCounter(1, 1, 1, profiler),
-		phaseTSStatesHistory: make([][]models.TSState, 0),
+		phaseCounters:                  make([]counter.Counter, 1),
+		phasePointer:                   0,
+		phaseTxCounter:                 counter.NewCounter(1, 1, 1, profiler),
+		phaseTSStatesHistory:           make([][]models.TSState, 0),
+		phaseTSStatesHistoryLikeliness: make([]float32, 0),
 
 		access: &sync.Mutex{},
 
@@ -26,7 +28,7 @@ func NewPhase(history int, states int, buffersize int, phaseLikeliness float32, 
 		states:                   states,
 		buffersize:               buffersize,
 		phaseThresholdLikeliness: phaseLikeliness,
-		phaseThresholdCounts:     phaseMin,
+		phaseThresholdHistory:    phaseHistory,
 	}
 	// create the first phase counter
 	phase.phaseCounters[0] = counter.NewCounter(phase.history, phase.states, phase.buffersize, phase.profiler)
@@ -34,15 +36,17 @@ func NewPhase(history int, states int, buffersize int, phaseLikeliness float32, 
 	return phase
 }
 
+// Phase handles the phase detection and state counting of the profiler
 type Phase struct {
 	// upper level profiler
 	profiler api.TSProfiler
 
 	// state
-	phaseCounters        []counter.Counter
-	phasePointer         int
-	phaseTxCounter       counter.Counter
-	phaseTSStatesHistory [][]models.TSState
+	phaseCounters                  []counter.Counter
+	phasePointer                   int
+	phaseTxCounter                 counter.Counter
+	phaseTSStatesHistory           [][]models.TSState
+	phaseTSStatesHistoryLikeliness []float32
 
 	access *sync.Mutex
 
@@ -51,42 +55,50 @@ type Phase struct {
 	states                   int
 	buffersize               int
 	phaseThresholdLikeliness float32
-	phaseThresholdCounts     int64
+	phaseThresholdHistory    int64
 }
 
+// Count takes a discretized Buffer represented as TSStates for each metric,
+// adjusts the current phase and increases its counter
 func (phase *Phase) Count(tsstates []models.TSState) {
 	phase.access.Lock()
 	defer phase.access.Unlock()
 
-	/*fmt.Printf("history: ")
-	for _, n := range phase.phaseTSStatesHistory {
-		for _, k := range n {
-			fmt.Printf("%d", k.State.Value)
-		}
-		fmt.Printf(" ")
+	// update likeliness history
+	currentLikeliness := phase.phaseCounters[phase.phasePointer].Likeliness(tsstates)
+	if math.IsNaN(float64(currentLikeliness)) {
+		currentLikeliness = 1
 	}
-	fmt.Printf("\n")*/
+	phase.phaseTSStatesHistoryLikeliness = append(phase.phaseTSStatesHistoryLikeliness, currentLikeliness)
+	if int64(len(phase.phaseTSStatesHistoryLikeliness)) > phase.phaseThresholdHistory {
+		// remove first (oldest) item
+		phase.phaseTSStatesHistoryLikeliness = phase.phaseTSStatesHistoryLikeliness[1:]
+	}
 
-	likeliness := phase.phaseCounters[phase.phasePointer].Likeliness(tsstates)
-	counts := phase.phaseCounters[phase.phasePointer].Totalcounts()
-	//fmt.Printf("likeliness: %.2f, counts: %d\n", likeliness, counts)
-	if likeliness < phase.phaseThresholdLikeliness && counts > phase.phaseThresholdCounts {
-		// if likeliness is below threshold, look for better matching phase
+	// calculate historyLikeliness
+	historyLikelinessSum := float32(0)
+	//countSum := 0
+	for _, likeliness := range phase.phaseTSStatesHistoryLikeliness {
+		//historyLikelinessSum += likeliness * float32(i+1)
+		historyLikelinessSum += likeliness
+		//countSum += (i + 1)
+	}
+	//historyLikeliness := historyLikelinessSum / float32(countSum)
+	historyLikeliness := historyLikelinessSum / float32(len(phase.phaseTSStatesHistoryLikeliness))
+	//historyLikeliness := currentLikeliness
+
+	if historyLikeliness < phase.phaseThresholdLikeliness {
+		// if likeliness is below threshold, look for better matching phase!
+
 		//fmt.Printf("likeliness: %.2f, counts: %d\n", likeliness, counts)
+		//fmt.Printf("start lookup for other phase\n")
 
-		// look for other phases
+		// loop through phases to search better matching one
 		newPhasePointer := -1
 		for i, phaseCounter := range phase.phaseCounters {
-			/*l := phase.Likeliness(tsstates)
-			fmt.Printf("phase %d likeliness: %.2f\n", i, l)
-			if l > 0 && likeliness < l {
-				newPhasePointer = i
-				likeliness = l
-			}*/
-
 			txMatrices := phaseCounter.GetTx()
 			history := phase.phaseTSStatesHistory[:len(phase.phaseTSStatesHistory)-1]
-			// nextState := tsstates
+
 			// caution: cannot provide history directly to TxLikeliness:
 			// history with x,y,z elements would be the state "x-y-z"!
 
@@ -98,36 +110,34 @@ func (phase *Phase) Count(tsstates []models.TSState) {
 					// as long as history has "next" item, take from history
 					nextState = history[i+1]
 				} else {
+					// end of historic states, take currently incoming tsstate
 					nextState = tsstates
 				}
 				l := models.TxLikeliness(txMatrices, [][]models.TSState{historyStep}, nextState)
-				//fmt.Printf("history step likeliness: %.2f\n", l)
 				lSum += l
 			}
 			phaseLikeliness = lSum / float32(len(history))
 
 			//fmt.Printf("phase %d likeliness: %.2f\n", i, phaseLikeliness)
-			if likeliness < phaseLikeliness && phaseLikeliness > phase.phaseThresholdLikeliness {
+			if historyLikeliness < phaseLikeliness && phaseLikeliness > phase.phaseThresholdLikeliness {
 				newPhasePointer = i
-				likeliness = phaseLikeliness
+				historyLikeliness = phaseLikeliness
 			}
-
 		}
 		if newPhasePointer != -1 {
-			// found a phase!
-			//fmt.Printf("found matching phase %d\n", newPhasePointer)
+			// found an existing, matching phase!
+			fmt.Printf("found better matching phase %d (%.3f)\n", newPhasePointer, historyLikeliness)
 			phase.phasePointer = newPhasePointer
-		}
-
-		// create a new phase
-		if newPhasePointer == -1 {
-			//fmt.Printf("create new phase\n")
+		} else {
+			// create a new phase
+			phaseid := len(phase.phaseCounters) - 1
+			fmt.Printf("create new phase %d\n", phaseid)
 			phase.phaseCounters = append(phase.phaseCounters, counter.NewCounter(phase.history, phase.states, phase.buffersize, phase.profiler))
-			phase.phasePointer = len(phase.phaseCounters) - 1 // point to the newly added
+			phase.phasePointer = phaseid // point to the newly added
 		}
 	}
 
-	// increase counter on found phase
+	// increase counter on current phase
 	phase.phaseCounters[phase.phasePointer].Count(tsstates)
 
 	// increase phase to phase counter
@@ -151,7 +161,7 @@ func (phase *Phase) Count(tsstates []models.TSState) {
 
 	// update history
 	phase.phaseTSStatesHistory = append(phase.phaseTSStatesHistory, tsstates)
-	if len(phase.phaseTSStatesHistory) > maxPhaseHistory {
+	if int64(len(phase.phaseTSStatesHistory)) > phase.phaseThresholdHistory {
 		// remove first (oldest) item
 		phase.phaseTSStatesHistory = phase.phaseTSStatesHistory[1:]
 	}

@@ -27,8 +27,8 @@ var options struct {
 
 	PeriodSize string `long:"periodsize" default:"" description:"comma separated list of ints, specifies descrete states per period"`
 
-	PhaseChangeLikeliness float32 `long:"phasechangelikeliness" default:"0.6"`
-	PhaseChangeMincount   int64   `long:"phasechangemincount" default:"60"`
+	PhaseChangeLikeliness float32 `long:"phasechangelikeliness" default:""`
+	PhaseChangeHistory    int64   `long:"phasechangehistory" default:"1"`
 
 	Outputfile  string `long:"output" default:"-" description:"path to write profile to, stdout if '-'"`
 	Historyfile string `long:"out.history" default:"" description:"path to write last historic values to, stdout if '-', empty to disable"`
@@ -140,7 +140,7 @@ func initProfiler() {
 		FixBound:              options.FixedBound,
 		PeriodSize:            periodSize,
 		PhaseChangeLikeliness: options.PhaseChangeLikeliness,
-		PhaseChangeMincount:   options.PhaseChangeMincount,
+		PhaseChangeHistory:    options.PhaseChangeHistory,
 	})
 }
 

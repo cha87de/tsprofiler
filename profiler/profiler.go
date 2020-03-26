@@ -47,7 +47,7 @@ func (profiler *Profiler) initialize(settings models.Settings) {
 	profiler.buffer = buffer.NewBuffer(settings.FilterStdDevs, profiler)
 	profiler.discretizer = discretizer.NewDiscretizer(settings.States, settings.FixBound, profiler)
 	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, profiler)
-	profiler.phase = phase.NewPhase(settings.History, settings.States, settings.BufferSize, settings.PhaseChangeLikeliness, settings.PhaseChangeMincount, profiler)
+	profiler.phase = phase.NewPhase(settings.History, settings.States, settings.BufferSize, settings.PhaseChangeLikeliness, settings.PhaseChangeHistory, profiler)
 
 	// initialize root tx counter
 	profiler.overallCounter = counter.NewCounter(settings.History, settings.States, settings.BufferSize, profiler)
@@ -118,8 +118,12 @@ func (profiler *Profiler) inputListener() {
 			profiler.lastStates = tsstates
 
 			// call sub components
-			profiler.period.Count(tsstates)
-			profiler.phase.Count(tsstates)
+			if len(profiler.settings.PeriodSize) > 0 {
+				profiler.period.Count(tsstates)
+			}
+			if profiler.settings.PhaseChangeLikeliness != float32(0) {
+				profiler.phase.Count(tsstates)
+			}
 
 			itemCount = 0
 
