@@ -37,4 +37,6 @@ type Settings struct {
 	PhaseChangeLikeliness float32 `json:"phaseChangeLikeliness"`
 	// Phase Change Detection settings (state history length)
 	PhaseChangeHistory int64 `json:"phaseChangeHistory"`
+	// Phase Change Detection settings (state history fade out)
+	PhaseChangeHistoryFadeout bool `json:"phaseChangeHistoryFadeout"`
 }

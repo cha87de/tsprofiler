@@ -10,7 +10,7 @@ import (
 )
 
 // NewPhase instantiates and returns a new Phase with the provided parameters
-func NewPhase(history int, states int, buffersize int, phaseLikeliness float32, phaseHistory int64, profiler api.TSProfiler) Phase {
+func NewPhase(history int, states int, buffersize int, phaseLikeliness float32, phaseHistory int64, phaseHistoryFadeout bool, profiler api.TSProfiler) Phase {
 	phase := Phase{
 		profiler: profiler,
 
@@ -19,6 +19,7 @@ func NewPhase(history int, states int, buffersize int, phaseLikeliness float32, 
 		phaseTxCounter:                 counter.NewCounter(1, 1, 1, profiler),
 		phaseTSStatesHistory:           make([][]models.TSState, 0),
 		phaseTSStatesHistoryLikeliness: make([]float32, 0),
+		phaseTSStatesHistoryFadeout:    phaseHistoryFadeout,
 
 		access: &sync.Mutex{},
 
@@ -46,6 +47,7 @@ type Phase struct {
 	phaseTxCounter                 counter.Counter
 	phaseTSStatesHistory           [][]models.TSState
 	phaseTSStatesHistoryLikeliness []float32
+	phaseTSStatesHistoryFadeout    bool
 
 	access *sync.Mutex
 
@@ -76,14 +78,21 @@ func (phase *Phase) Count(tsstates []models.TSState) {
 
 	// calculate historyLikeliness
 	historyLikelinessSum := float32(0)
-	//countSum := 0
-	for _, likeliness := range phase.phaseTSStatesHistoryLikeliness {
-		//historyLikelinessSum += likeliness * float32(i+1)
-		historyLikelinessSum += likeliness
-		//countSum += (i + 1)
+	countSum := 0
+	for i, likeliness := range phase.phaseTSStatesHistoryLikeliness {
+		if phase.phaseTSStatesHistoryFadeout {
+			historyLikelinessSum += likeliness * float32(i+1)
+			countSum += (i + 1)
+		} else {
+			historyLikelinessSum += likeliness
+		}
 	}
-	//historyLikeliness := historyLikelinessSum / float32(countSum)
-	historyLikeliness := historyLikelinessSum / float32(len(phase.phaseTSStatesHistoryLikeliness))
+	historyLikeliness := float32(0)
+	if phase.phaseTSStatesHistoryFadeout {
+		historyLikeliness = historyLikelinessSum / float32(countSum)
+	} else {
+		historyLikeliness = historyLikelinessSum / float32(len(phase.phaseTSStatesHistoryLikeliness))
+	}
 	//historyLikeliness := currentLikeliness
 
 	if historyLikeliness < phase.phaseThresholdLikeliness {
@@ -95,6 +104,10 @@ func (phase *Phase) Count(tsstates []models.TSState) {
 		// loop through phases to search better matching one
 		newPhasePointer := -1
 		for i, phaseCounter := range phase.phaseCounters {
+			if i == phase.phasePointer {
+				// skip current phase
+				continue
+			}
 			txMatrices := phaseCounter.GetTx()
 			history := phase.phaseTSStatesHistory[:len(phase.phaseTSStatesHistory)-1]
 

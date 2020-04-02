@@ -47,7 +47,7 @@ func (profiler *Profiler) initialize(settings models.Settings) {
 	profiler.buffer = buffer.NewBuffer(settings.FilterStdDevs, profiler)
 	profiler.discretizer = discretizer.NewDiscretizer(settings.States, settings.FixBound, profiler)
 	profiler.period = period.NewPeriod(settings.History, settings.States, settings.BufferSize, settings.PeriodSize, profiler)
-	profiler.phase = phase.NewPhase(settings.History, settings.States, settings.BufferSize, settings.PhaseChangeLikeliness, settings.PhaseChangeHistory, profiler)
+	profiler.phase = phase.NewPhase(settings.History, settings.States, settings.BufferSize, settings.PhaseChangeLikeliness, settings.PhaseChangeHistory, settings.PhaseChangeHistoryFadeout, profiler)
 
 	// initialize root tx counter
 	profiler.overallCounter = counter.NewCounter(settings.History, settings.States, settings.BufferSize, profiler)

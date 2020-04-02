@@ -27,8 +27,9 @@ var options struct {
 
 	PeriodSize string `long:"periodsize" default:"" description:"comma separated list of ints, specifies descrete states per period"`
 
-	PhaseChangeLikeliness float32 `long:"phasechangelikeliness" default:""`
-	PhaseChangeHistory    int64   `long:"phasechangehistory" default:"1"`
+	PhaseChangeLikeliness     float32 `long:"phasechangelikeliness" default:""`
+	PhaseChangeHistory        int64   `long:"phasechangehistory" default:"1"`
+	PhaseChangeHistoryFadeout bool    `long:"phasechangehistoryfadeout"`
 
 	Outputfile  string `long:"output" default:"-" description:"path to write profile to, stdout if '-'"`
 	Historyfile string `long:"out.history" default:"" description:"path to write last historic values to, stdout if '-', empty to disable"`
@@ -132,15 +133,16 @@ func initProfiler() {
 
 	// create new profiler
 	tsprofiler = profiler.NewProfiler(models.Settings{
-		Name:                  "csv2tsprofile",
-		BufferSize:            options.BufferSize,
-		States:                options.States,
-		FilterStdDevs:         options.FilterStdDevs,
-		History:               options.History,
-		FixBound:              options.FixedBound,
-		PeriodSize:            periodSize,
-		PhaseChangeLikeliness: options.PhaseChangeLikeliness,
-		PhaseChangeHistory:    options.PhaseChangeHistory,
+		Name:                      "csv2tsprofile",
+		BufferSize:                options.BufferSize,
+		States:                    options.States,
+		FilterStdDevs:             options.FilterStdDevs,
+		History:                   options.History,
+		FixBound:                  options.FixedBound,
+		PeriodSize:                periodSize,
+		PhaseChangeLikeliness:     options.PhaseChangeLikeliness,
+		PhaseChangeHistory:        options.PhaseChangeHistory,
+		PhaseChangeHistoryFadeout: options.PhaseChangeHistoryFadeout,
 	})
 }
 
