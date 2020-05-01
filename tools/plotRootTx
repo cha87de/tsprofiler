@@ -1,0 +1,67 @@
+#!/usr/bin/python
+#######################################
+# plotProfile - plots a tsprofiler profile's tx matrix, simulates and plots
+# time series from a profile using the a) average and b) the tx matrix.
+#
+# usage: plotProfile.py [-h] [--simlength SIMLENGTH] [--graphlength GRAPHLENGTH]
+#                       profile metric
+# 
+# Print a TSProfiler profile.
+# 
+# positional arguments:
+#   profile               the file which contains the profile as json
+#   metric                specifies the metric name to use, which must be set in
+#                         the profile
+# 
+# optional arguments:
+#   -h, --help            show this help message and exit
+#   --simlength SIMLENGTH
+#                         amount of time points to simulate
+#   --graphlength GRAPHLENGTH
+#                         amount of time points in the plotted graph. if less
+#                         than simlength, values are aggregated
+#
+# Author: Christopher Hauser <post@c-ha.de>
+#######################################
+import json
+import matplotlib.pyplot as plt
+import argparse
+
+def printTXPlot(values, states, outfile):
+    printValues = []
+    emptyProbs = [0] * states
+    for x in range(0, states):
+        index = str(x)
+        metricProfile = values.get(index, {})
+        nextProbs = metricProfile.get("nextProbs", emptyProbs)
+        printValues.append(nextProbs)
+    plt.imshow(printValues, cmap='Greys')
+    plt.colorbar()
+    plt.savefig(outfile)
+    plt.clf()
+    plt.close()
+    plt.cla()
+
+def main(file, outpath):
+    # read profile from json file
+    with open(file) as f:
+        profile = json.load(f)
+        states = profile["settings"]["states"]
+        
+        # for each metric
+        for m in profile["roottx"]:
+            metricName = m["metric"]
+            transitions = m["transitions"]
+            printTXPlot(transitions, states, outpath+"/txplot-%s.png" % (metricName) )
+
+# bootstrap application: handle arguments, then call main
+parser = argparse.ArgumentParser(description='Print the transition matrizes of a given profile and metric.')
+
+parser.add_argument('profile', metavar='profile',
+                    help='the file which contains the profile as json')
+parser.add_argument('outpath', metavar='outpath',
+                    help='plot output files to this location')
+
+args = parser.parse_args()
+#print(args)
+main(args.profile, args.outpath)
