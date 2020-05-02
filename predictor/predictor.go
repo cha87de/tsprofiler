@@ -38,26 +38,33 @@ type nextState struct {
 	stats  models.TSStats
 }
 
-// NextState simulates next states for each metric using a random variable and the TSProfile's probabilities
-func (predictor *Predictor) nextState() (map[string]nextState, error) {
-	states := make(map[string]nextState)
+func (predictor *Predictor) getTxMatrices() []models.TxMatrix {
 	var txmatrices []models.TxMatrix
-
 	// define which matrices to be used (default: root matrix)
 	if predictor.mode == PredictionModeRootTx {
 		txmatrices = predictor.profile.PeriodTree.Root.TxMatrix
 		txmatrices = predictor.profile.RootTx
 	} else if predictor.mode == PredictionModePhases {
-		predictor.nextPhase()
 		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
 	} else if predictor.mode == PredictionModePeriods {
-		predictor.nextPeriod(0)
 		txmatrices = predictor.getCurrentPeriodTxMatrix()
 	} else {
 		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
 		// fallback: root tx
 		txmatrices = predictor.profile.RootTx
 	}
+	return txmatrices
+}
+
+// NextState simulates next states for each metric using a random variable and the TSProfile's probabilities
+func (predictor *Predictor) nextState() (map[string]nextState, error) {
+	states := make(map[string]nextState)
+	if predictor.mode == PredictionModePhases {
+		predictor.nextPhase()
+	} else if predictor.mode == PredictionModePeriods {
+		predictor.nextPeriod(0)
+	}
+	var txmatrices = predictor.getTxMatrices()
 
 	// for each metric
 	for metric, stateHistory := range predictor.currentState {
@@ -213,19 +220,7 @@ func (predictor *Predictor) Simulate(steps int) ([][]models.TSState, error) {
 }
 
 func (predictor *Predictor) initializeState() {
-	var txmatrices []models.TxMatrix
-	if predictor.mode == PredictionModeRootTx {
-		txmatrices = predictor.profile.RootTx
-	} else if predictor.mode == PredictionModePhases {
-		txmatrices = predictor.profile.Phases.Phases[predictor.currentPhase]
-	} else if predictor.mode == PredictionModePeriods {
-		txmatrices = predictor.getCurrentPeriodTxMatrix()
-	} else {
-		fmt.Printf("warning: invalid prediction mode specified - falling back to root tx matrix")
-		// fallback: root tx
-		txmatrices = predictor.profile.RootTx
-	}
-
+	var txmatrices = predictor.getTxMatrices()
 	currentState := make(map[string]string)
 	for _, tx := range txmatrices {
 		if _, exists := currentState[tx.Metric]; !exists {
